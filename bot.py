@@ -140,6 +140,14 @@ async def chat_command(ctx, *, message):
             self.content = content
             self.channel = channel
             self.author = author
+            # Add missing Discord message attributes
+            self.mention_everyone = False
+            self.mentions = []
+            self.role_mentions = []
+            self.channel_mentions = []
+            self.attachments = []
+            self.embeds = []
+            self.reactions = []
         
         async def reply(self, content):
             await self.channel.send(f"{self.author.mention} {content}")
@@ -189,6 +197,14 @@ async def slash_chat(interaction: discord.Interaction, message: str):
             self.content = content
             self.channel = channel  
             self.author = author
+            # Add missing Discord message attributes
+            self.mention_everyone = False
+            self.mentions = []
+            self.role_mentions = []
+            self.channel_mentions = []
+            self.attachments = []
+            self.embeds = []
+            self.reactions = []
         
         async def reply(self, content):
             await interaction.followup.send(content)
