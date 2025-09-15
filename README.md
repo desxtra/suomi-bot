@@ -1,6 +1,6 @@
 # Character.AI Suomi KP-31 Discord Bot
 
-A Discord bot that brings Suomi Kp-31 to your Discord server/
+A Discord bot that brings Suomi Kp-31 to your Discord server
 
 ## Features
 
