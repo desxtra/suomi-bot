@@ -1,13 +1,14 @@
-# Character.AI Discord Bot
+# Character.AI Suomi KP-31 Discord Bot
 
-A Discord bot that brings Character.AI conversations to your Discord server!
+A Discord bot that brings Suomi Kp-31 to your Discord server/
 
 ## Features
 
-- Chat with Character.AI characters directly in Discord
+- Chat with Suomi directly in Discord
 - Maintain conversation context per user
 - Support for mentions, direct messages, and commands
 - Easy setup with environment variables
+- Gunsmoke Reminder
 
 ## Setup Instructions
 
@@ -40,13 +41,12 @@ Set up these environment variables in Replit Secrets:
 
 Once the bot is running and invited to your server:
 
-- **Mention the bot**: `@BotName Hello there!`
 - **Send a DM**: Just message the bot directly
 - **Use commands**:
-  - `!chat <message>` - Chat with the AI
-  - `!ai <message>` - Alternative chat command
-  - `!help_bot` - Show help information
-  - `!reset_chat` - Reset your conversation history
+  - `/chat <message>` - Chat with the AI
+  - `/ai <message>` - Alternative chat command
+  - `/help_bot` - Show help information
+  - `/reset_chat` - Reset your conversation history
 
 ## How it Works
 
@@ -60,7 +60,7 @@ The bot maintains separate conversation contexts for each user, so everyone can 
 
 **Character.AI errors:**
 - Verify your CHARACTERAI_TOKEN and CHARACTER_ID are correct
-- Try using the `!reset_chat` command to start a fresh conversation
+- Try using the `/reset` command to start a fresh conversation
 
 **Bot offline:**
 - Check that DISCORD_TOKEN is valid and the bot is invited to your server
