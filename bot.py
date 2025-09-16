@@ -577,8 +577,8 @@ async def slash_help(interaction: discord.Interaction):
 async def slash_sheets(interaction: discord.Interaction):
     """Slash command to get a link to the Gunsmoke Frontline Google Sheet"""
     sheet_url = "https://docs.google.com/spreadsheets/d/1-ElgYSa6DscI9FsodU1S3gxLy3Xk7TwrN4IDpnqQfxo/edit?gid=1527363414#gid=1527363414"
-    embed = discord.Embed(title="📊 Gunsmoke Frontline Google Sheet",
-                          description=f"[Gunsmoke Frontline Sheet]({sheet_url})",
+    embed = discord.Embed(title="Alaris Awesome Support Sheet",
+                          description=f"[Really Awesome Sheet]({sheet_url})",
                           color=0x00ff00)
     await interaction.response.send_message(embed=embed)
 
