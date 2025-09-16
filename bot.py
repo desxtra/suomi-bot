@@ -767,4 +767,4 @@ if __name__ == '__main__':
     except discord.LoginFailure:
         print("Error: Invalid Discord token. Please check your DISCORD_TOKEN.")
     except Exception as e:
-        print(f"Error running bot: {e}")```
+        print(f"Error running bot: {e}")
