@@ -153,6 +153,94 @@ async def gunsmoke_reminder():
         status, start_time, end_time = get_gunsmoke_status(config)
 
         if status == "active":
+            # Calculate days remaining
+            days_remaining = (end_time - now).days + 1
+
+            # Check for different reminder messages based on days remaining
+            if days_remaining == 7:
+                # First day of Gunsmoke
+                if config.get('last_notification_sent') != f"{current_date}_day1":
+                    await send_gunsmoke_notification(
+                        config['notification_channels'],
+                        "🎉 **First Day of Gunsmoke Frontline!** 🎉\n\n"
+                        "Platoon, it's time to shine! Let's make today count and score some points!\n"
+                        "Remember, Gunsmoke ends 3 hours before reset at 16:00 Asia/Jakarta (UTC+7) Time."
+                    )
+                    config['last_notification_sent'] = f"{current_date}_day1"
+                    save_gunsmoke_config(config)
+
+            elif days_remaining == 6:
+                # Second day of Gunsmoke
+                if config.get('last_notification_sent') != f"{current_date}_day2":
+                    await send_gunsmoke_notification(
+                        config['notification_channels'],
+                        "🔥 **Second Day of Gunsmoke Frontline!** 🔥\n\n"
+                        "Platoon, we're halfway through! Keep up the great work and aim for even higher scores!\n"
+                        "Remember, Gunsmoke ends 3 hours before reset at 16:00 Asia/Jakarta (UTC+7) Time."
+                    )
+                    config['last_notification_sent'] = f"{current_date}_day2"
+                    save_gunsmoke_config(config)
+
+            elif days_remaining == 5:
+                # Third day of Gunsmoke
+                if config.get('last_notification_sent') != f"{current_date}_day3":
+                    await send_gunsmoke_notification(
+                        config['notification_channels'],
+                        "💪 **Third Day of Gunsmoke Frontline!** 💪\n\n"
+                        "Platoon, we're making progress! Let's push for even better results today!\n"
+                        "Remember, Gunsmoke ends 3 hours before reset at 16:00 Asia/Jakarta (UTC+7) Time."
+                    )
+                    config['last_notification_sent'] = f"{current_date}_day3"
+                    save_gunsmoke_config(config)
+
+            elif days_remaining == 4:
+                # Fourth day of Gunsmoke
+                if config.get('last_notification_sent') != f"{current_date}_day4":
+                    await send_gunsmoke_notification(
+                        config['notification_channels'],
+                        "🏆 **Fourth Day of Gunsmoke Frontline!** 🏆\n\n"
+                        "Platoon, we're getting closer to the end! Let's aim for some great scores today!\n"
+                        "Remember, Gunsmoke ends 3 hours before reset at 16:00 Asia/Jakarta (UTC+7) Time."
+                    )
+                    config['last_notification_sent'] = f"{current_date}_day4"
+                    save_gunsmoke_config(config)
+
+            elif days_remaining == 3:
+                # Fifth day of Gunsmoke
+                if config.get('last_notification_sent') != f"{current_date}_day5":
+                    await send_gunsmoke_notification(
+                        config['notification_channels'],
+                        "🎯 **Fifth Day of Gunsmoke Frontline!** 🎯\n\n"
+                        "Platoon, we're almost there! Let's make the most of today and aim for some great scores!\n"
+                        "Remember, Gunsmoke ends 3 hours before reset at 16:00 Asia/Jakarta (UTC+7) Time."
+                    )
+                    config['last_notification_sent'] = f"{current_date}_day5"
+                    save_gunsmoke_config(config)
+
+            elif days_remaining == 2:
+                # Sixth day of Gunsmoke
+                if config.get('last_notification_sent') != f"{current_date}_day6":
+                    await send_gunsmoke_notification(
+                        config['notification_channels'],
+                        "🎉 **Sixth Day of Gunsmoke Frontline!** 🎉\n\n"
+                        "Platoon, we're on the final stretch! Let's make today count and aim for some great scores!\n"
+                        "Remember, Gunsmoke ends 3 hours before reset at 16:00 Asia/Jakarta (UTC+7) Time."
+                    )
+                    config['last_notification_sent'] = f"{current_date}_day6"
+                    save_gunsmoke_config(config)
+
+            elif days_remaining == 1:
+                # Last day of Gunsmoke
+                if config.get('last_notification_sent') != f"{current_date}_lastday":
+                    await send_gunsmoke_notification(
+                        config['notification_channels'],
+                        "🎉 **Last Day of Gunsmoke Frontline!** 🎉\n\n"
+                        "Platoon, it's the final day! Let's make it count and aim for some great scores!\n"
+                        "Remember, Gunsmoke ends 3 hours before reset at 16:00 Asia/Jakarta (UTC+7) Time."
+                    )
+                    config['last_notification_sent'] = f"{current_date}_lastday"
+                    save_gunsmoke_config(config)
+
             # Check for 3-hour warning (only on last day)
             last_day = end_time.date() == now.date()
             warning_time = end_time - timedelta(hours=3)
@@ -165,7 +253,8 @@ async def gunsmoke_reminder():
                     config['notification_channels'],
                     "⚠️ **Gunsmoke Frontline Warning!** ⚠️\n\n"
                     "Keep in mind that Gunsmoke ends 3 hours before reset! "
-                    "Make sure to finish your runs before the event closes!")
+                    "Make sure to finish your runs before the event closes!"
+                )
 
                 config['last_notification_sent'] = f"{current_date}_warning"
                 save_gunsmoke_config(config)
@@ -188,6 +277,47 @@ async def gunsmoke_reminder():
                 config['last_reset_notification'] = current_date
                 save_gunsmoke_config(config)
 
+        elif status == "upcoming":
+            # Calculate days until Gunsmoke starts
+            days_until_start = (start_time - now).days
+
+            # Check for different reminder messages based on days until start
+            if days_until_start == 2:
+                # 2 days before Gunsmoke starts
+                if config.get('last_notification_sent') != f"{current_date}_2days":
+                    await send_gunsmoke_notification(
+                        config['notification_channels'],
+                        "🎯 **Gunsmoke Frontline is coming in 2 days!** 🎯\n\n"
+                        "Platoon, get ready to shine! Let's make the most of this event and aim for some great scores!\n"
+                        "Gunsmoke will start at 16:00 Asia/Jakarta (UTC+7) Time."
+                    )
+                    config['last_notification_sent'] = f"{current_date}_2days"
+                    save_gunsmoke_config(config)
+
+            elif days_until_start == 1:
+                # 1 day before Gunsmoke starts
+                if config.get('last_notification_sent') != f"{current_date}_1day":
+                    await send_gunsmoke_notification(
+                        config['notification_channels'],
+                        "🎯 **Gunsmoke Frontline is coming tomorrow!** 🎯\n\n"
+                        "Platoon, get ready to shine! Let's make the most of this event and aim for some great scores!\n"
+                        "Gunsmoke will start at 16:00 Asia/Jakarta (UTC+7) Time."
+                    )
+                    config['last_notification_sent'] = f"{current_date}_1day"
+                    save_gunsmoke_config(config)
+
+            elif days_until_start == 0:
+                # Day before Gunsmoke starts
+                if config.get('last_notification_sent') != f"{current_date}_today":
+                    await send_gunsmoke_notification(
+                        config['notification_channels'],
+                        "🎯 **Gunsmoke Frontline is starting today!** 🎯\n\n"
+                        "Platoon, get ready to shine! Let's make the most of this event and aim for some great scores!\n"
+                        "Gunsmoke will start at 16:00 Asia/Jakarta (UTC+7) Time."
+                    )
+                    config['last_notification_sent'] = f"{current_date}_today"
+                    save_gunsmoke_config(config)
+
         elif status == "ended":
             # Auto-schedule next gunsmoke
             next_start = calculate_next_gunsmoke_start(config['current_start'])
@@ -200,7 +330,8 @@ async def gunsmoke_reminder():
                 config['notification_channels'],
                 f"📅 **Next Gunsmoke Frontline scheduled!**\n\n"
                 f"Next event starts: **{next_start.strftime('%Y-%m-%d %H:%M')} Asia/Jakarta (UTC+7) Time**\n"
-                f"Get ready platoon!")
+                f"Get ready platoon!"
+            )
 
     except Exception as e:
         logger.error(f"Error in gunsmoke reminder task: {e}")
@@ -442,6 +573,16 @@ async def slash_help(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed)
 
 
+@bot.tree.command(name='sheets', description='Get a link to the Gunsmoke Frontline Google Sheet')
+async def slash_sheets(interaction: discord.Interaction):
+    """Slash command to get a link to the Gunsmoke Frontline Google Sheet"""
+    sheet_url = "https://docs.google.com/spreadsheets/d/1-ElgYSa6DscI9FsodU1S3gxLy3Xk7TwrN4IDpnqQfxo/edit?gid=1527363414#gid=1527363414"
+    embed = discord.Embed(title="📊 Gunsmoke Frontline Google Sheet",
+                          description=f"[Gunsmoke Frontline Sheet]({sheet_url})",
+                          color=0x00ff00)
+    await interaction.response.send_message(embed=embed)
+
+
 # Gunsmoke Frontline Management Commands
 @bot.tree.command(name='gunsmoke',
                   description='Manage Gunsmoke Frontline event system')
@@ -626,4 +767,4 @@ if __name__ == '__main__':
     except discord.LoginFailure:
         print("Error: Invalid Discord token. Please check your DISCORD_TOKEN.")
     except Exception as e:
-        print(f"Error running bot: {e}")
+        print(f"Error running bot: {e}")```
