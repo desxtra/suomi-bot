@@ -424,7 +424,7 @@ async def handle_ai_response(message):
 
                 # Get the AI's response text from primary candidate
                 primary_candidate = response.get_primary_candidate()
-                ai_response = primary_candidate.text if primary_candidate else "Sorry, I didn't get a response."
+                ai_response = primary_candidate.text if primary_candidate else "Sorry, I can't think anything. I'm confused. TwT"
 
                 # Discord has a 2000 character limit for messages
                 if len(ai_response) > 1900:
@@ -441,13 +441,13 @@ async def handle_ai_response(message):
 
                 # Fallback response when Character.AI fails
                 await message.reply(
-                    f"I heard you say: '{user_message}'\n\nSorry, I'm having trouble connecting to Character.AI right now. I'll try to reset our conversation."
+                    f"I heard you say: '{user_message}'\n\But sorry, I can't think anything. I'll try fix this... :D"
                 )
 
     except Exception as e:
         logger.error(f"Error generating AI response: {e}")
         await message.reply(
-            "Sorry, I encountered an error while processing your message.")
+            "Sorry, my brain crashes while trying to talk with you. T_T")
 
 
 @bot.command(name='chat')
