@@ -4,20 +4,12 @@ A Discord bot that brings Suomi Kp-31 to your Discord server and provides tools 
 
 ## Features
 
-<<<<<<< HEAD
 - Chat with Suomi directly in Discord
 - Maintain conversation context per user
 - Support for mentions, direct messages, and commands
 - Easy setup with environment variables
 - Gunsmoke Reminder
 - Important Sheets
-=======
-- **Chat with Suomi**: Engage in conversations with Suomi Kp-31 directly in Discord
-- **Maintain conversation context**: The bot remembers conversation history for each user
-- **Multiple interaction methods**: Chat via mentions, direct messages, or commands
-- **Gunsmoke Frontline Management**: Set up reminders and track the event schedule
-- **Google Sheets Integration**: Quick access to important event information
->>>>>>> 259b11f62c6aa23e14f2fbfd897039e273ba8835
 
 ## Setup Instructions
 
