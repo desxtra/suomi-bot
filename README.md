@@ -9,6 +9,7 @@ A Discord bot that brings Suomi Kp-31 to your Discord server
 - Support for mentions, direct messages, and commands
 - Easy setup with environment variables
 - Gunsmoke Reminder
+- Important Sheets
 
 ## Setup Instructions
 

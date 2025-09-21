@@ -138,7 +138,7 @@ async def on_ready():
     print('Gunsmoke Frontline reminder system started!')
 
 
-@tasks.loop(minutes=10)  # Check every 10 minutes
+@tasks.loop(minutes=1)  # Check every 1 minutes
 async def gunsmoke_reminder():
     """Background task to check for gunsmoke reminders"""
     try:
@@ -153,6 +153,94 @@ async def gunsmoke_reminder():
         status, start_time, end_time = get_gunsmoke_status(config)
 
         if status == "active":
+            # Calculate days remaining
+            days_remaining = (end_time - now).days + 1
+
+            # Check for different reminder messages based on days remaining
+            if days_remaining == 7:
+                # First day of Gunsmoke
+                if config.get('last_notification_sent') != f"{current_date}_day1":
+                    await send_gunsmoke_notification(
+                        config['notification_channels'],
+                        "**First Day of Gunsmoke Frontline!**\n\n"
+                        "Everyone, it's time to shine! Let's make today count and score some points!\n"
+                        "Remember, Gunsmoke ends 3 hours before reset."
+                    )
+                    config['last_notification_sent'] = f"{current_date}_day1"
+                    save_gunsmoke_config(config)
+
+            elif days_remaining == 6:
+                # Second day of Gunsmoke
+                if config.get('last_notification_sent') != f"{current_date}_day2":
+                    await send_gunsmoke_notification(
+                        config['notification_channels'],
+                        "**Second Day of Gunsmoke Frontline!**\n\n"
+                        "Keep up the great work and aim for even higher scores!\n"
+                        "Remember, Gunsmoke ends 3 hours before reset."
+                    )
+                    config['last_notification_sent'] = f"{current_date}_day2"
+                    save_gunsmoke_config(config)
+
+            elif days_remaining == 5:
+                # Third day of Gunsmoke
+                if config.get('last_notification_sent') != f"{current_date}_day3":
+                    await send_gunsmoke_notification(
+                        config['notification_channels'],
+                        "**Third Day of Gunsmoke Frontline!**\n\n"
+                        "Let's push for even better results today!\n"
+                        "Remember, Gunsmoke ends 3 hours before reset."
+                    )
+                    config['last_notification_sent'] = f"{current_date}_day3"
+                    save_gunsmoke_config(config)
+
+            elif days_remaining == 4:
+                # Fourth day of Gunsmoke
+                if config.get('last_notification_sent') != f"{current_date}_day4":
+                    await send_gunsmoke_notification(
+                        config['notification_channels'],
+                        "**Fourth Day of Gunsmoke Frontline!**\n\n"
+                        "Let's aim for some great scores today!\n"
+                        "Remember, Gunsmoke ends 3 hours before reset."
+                    )
+                    config['last_notification_sent'] = f"{current_date}_day4"
+                    save_gunsmoke_config(config)
+
+            elif days_remaining == 3:
+                # Fifth day of Gunsmoke
+                if config.get('last_notification_sent') != f"{current_date}_day5":
+                    await send_gunsmoke_notification(
+                        config['notification_channels'],
+                        "**Fifth Day of Gunsmoke Frontline!**\n\n"
+                        "Let's make the most of today and aim for some great scores!\n"
+                        "Remember, Gunsmoke ends 3 hours before reset."
+                    )
+                    config['last_notification_sent'] = f"{current_date}_day5"
+                    save_gunsmoke_config(config)
+
+            elif days_remaining == 2:
+                # Sixth day of Gunsmoke
+                if config.get('last_notification_sent') != f"{current_date}_day6":
+                    await send_gunsmoke_notification(
+                        config['notification_channels'],
+                        "**Sixth Day of Gunsmoke Frontline!**\n\n"
+                        "Let's make today count and aim for some great scores!\n"
+                        "Remember, Gunsmoke ends 3 hours before reset."
+                    )
+                    config['last_notification_sent'] = f"{current_date}_day6"
+                    save_gunsmoke_config(config)
+
+            elif days_remaining == 1:
+                # Last day of Gunsmoke
+                if config.get('last_notification_sent') != f"{current_date}_lastday":
+                    await send_gunsmoke_notification(
+                        config['notification_channels'],
+                        "**Last Day of Gunsmoke Frontline!**\n\n"
+                        "It's the final day! Let's make it count and aim for some great scores!\n"
+                        "Remember, Gunsmoke ends 3 hours before reset."
+                    )
+                    config['last_notification_sent'] = f"{current_date}_lastday"
+                    save_gunsmoke_config(config)
+
             # Check for 3-hour warning (only on last day)
             last_day = end_time.date() == now.date()
             warning_time = end_time - timedelta(hours=3)
@@ -163,9 +251,10 @@ async def gunsmoke_reminder():
 
                 await send_gunsmoke_notification(
                     config['notification_channels'],
-                    "⚠️ **Gunsmoke Frontline Warning!** ⚠️\n\n"
+                    "**Gunsmoke Frontline Warning!**\n\n"
                     "Keep in mind that Gunsmoke ends 3 hours before reset! "
-                    "Make sure to finish your runs before the event closes!")
+                    "Make sure to finish your runs before the event closes!"
+                )
 
                 config['last_notification_sent'] = f"{current_date}_warning"
                 save_gunsmoke_config(config)
@@ -181,12 +270,50 @@ async def gunsmoke_reminder():
 
                 await send_gunsmoke_notification(
                     config['notification_channels'],
-                    "🔄 **Gunsmoke is Reset. Good Work everyone! :D**\n\n"
+                    "**Gunsmoke is Reset. Good Work everyone! :D**\n\n"
                     "Let's do our best for today too! Time to score some points!"
                 )
 
                 config['last_reset_notification'] = current_date
                 save_gunsmoke_config(config)
+
+        elif status == "upcoming":
+            # Calculate days until Gunsmoke starts
+            days_until_start = (start_time - now).days
+
+            # Check for different reminder messages based on days until start
+            if days_until_start == 2:
+                # 2 days before Gunsmoke starts
+                if config.get('last_notification_sent') != f"{current_date}_2days":
+                    await send_gunsmoke_notification(
+                        config['notification_channels'],
+                        "**Gunsmoke Frontline is coming in 2 days!**\n\n"
+                        "Everyone, get ready to shine! Let's make the most of this event and aim for some great scores!\n"
+                    )
+                    config['last_notification_sent'] = f"{current_date}_2days"
+                    save_gunsmoke_config(config)
+
+            elif days_until_start == 1:
+                # 1 day before Gunsmoke starts
+                if config.get('last_notification_sent') != f"{current_date}_1day":
+                    await send_gunsmoke_notification(
+                        config['notification_channels'],
+                        "**Gunsmoke Frontline is coming tomorrow!**\n\n"
+                        "Everyone, get ready to shine! Let's make the most of this event and aim for some great scores!\n"   
+                    )
+                    config['last_notification_sent'] = f"{current_date}_1day"
+                    save_gunsmoke_config(config)
+
+            elif days_until_start == 0:
+                # Day before Gunsmoke starts
+                if config.get('last_notification_sent') != f"{current_date}_today":
+                    await send_gunsmoke_notification(
+                        config['notification_channels'],
+                        "**Gunsmoke Frontline is starting today!**\n\n"
+                        "Everyone, get ready to shine! Let's make the most of this event and aim for some great scores!\n"
+                    )
+                    config['last_notification_sent'] = f"{current_date}_today"
+                    save_gunsmoke_config(config)
 
         elif status == "ended":
             # Auto-schedule next gunsmoke
@@ -198,9 +325,10 @@ async def gunsmoke_reminder():
 
             await send_gunsmoke_notification(
                 config['notification_channels'],
-                f"📅 **Next Gunsmoke Frontline scheduled!**\n\n"
-                f"Next event starts: **{next_start.strftime('%Y-%m-%d %H:%M')} Asia/Jakarta (UTC+7) Time**\n"
-                f"Get ready platoon!")
+                f"**Next Gunsmoke Frontline scheduled!**\n\n"
+                f"Next event starts: **{next_start.strftime('%Y-%m-%d %H:%M')} (UTC+7) Time**\n"
+                f"Get ready Everyone!"
+            )
 
     except Exception as e:
         logger.error(f"Error in gunsmoke reminder task: {e}")
@@ -293,7 +421,7 @@ async def handle_ai_response(message):
 
                 # Get the AI's response text from primary candidate
                 primary_candidate = response.get_primary_candidate()
-                ai_response = primary_candidate.text if primary_candidate else "Sorry, I didn't get a response."
+                ai_response = primary_candidate.text if primary_candidate else "Sorry, I can't think anything. I'm confused. TwT"
 
                 # Discord has a 2000 character limit for messages
                 if len(ai_response) > 1900:
@@ -310,18 +438,18 @@ async def handle_ai_response(message):
 
                 # Fallback response when Character.AI fails
                 await message.reply(
-                    f"I heard you say: '{user_message}'\n\nSorry, I'm having trouble connecting to Character.AI right now. I'll try to reset our conversation."
+                    f"I heard you say: '{user_message}'\n\But sorry, I can't think anything. I'll try to fix this... :D"
                 )
 
     except Exception as e:
         logger.error(f"Error generating AI response: {e}")
         await message.reply(
-            "Sorry, I encountered an error while processing your message.")
+            "Sorry, my brain explode while trying to talk with you. T_T")
 
 
 @bot.command(name='chat')
 async def chat_command(ctx, *, message):
-    """Chat with the AI using a command"""
+    """Chat with Suomi using a command"""
 
     # Create a fake message object for consistency
     class FakeMessage:
@@ -372,9 +500,9 @@ async def reset_chat_command(ctx):
     user_id = str(ctx.author.id)
     if user_id in user_chats:
         del user_chats[user_id]
-        await ctx.send("✅ Your conversation history has been reset!")
+        await ctx.send("Your conversation history has been reset!")
     else:
-        await ctx.send("ℹ️ You don't have an active conversation to reset.")
+        await ctx.send("You don't have an active conversation to reset.")
 
 
 # Slash Commands (work without privileged intents)
@@ -413,10 +541,10 @@ async def slash_reset(interaction: discord.Interaction):
     if user_id in user_chats:
         del user_chats[user_id]
         await interaction.response.send_message(
-            "✅ Your conversation history has been reset!")
+            "Your conversation history has been reset!")
     else:
         await interaction.response.send_message(
-            "ℹ️ You don't have an active conversation to reset.")
+            "You don't have an active conversation to reset.")
 
 
 @bot.tree.command(name='help',
@@ -442,13 +570,32 @@ async def slash_help(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed)
 
 
+@bot.tree.command(name='sheets', description='Get a link to important sheets')
+async def slash_sheets(interaction: discord.Interaction):
+    """Slash command to get links to important Google Sheets"""
+    sheet1_url = "https://docs.google.com/spreadsheets/d/1-ElgYSa6DscI9FsodU1S3gxLy3Xk7TwrN4IDpnqQfxo/edit?usp=sharing"
+    sheet2_url = "https://docs.google.com/spreadsheets/d/1DogyU3K7ZXw2qbhP1EhRXIAw5nCyIV5G5e-QWviBZME/edit?usp=sharing"
+
+    description = (
+        f"[Alaris Awesome Support Sheet]({sheet1_url})\n"
+        f"[GFL2 Official Release Info Compilation]({sheet2_url})"
+    )
+
+    embed = discord.Embed(
+        title="Important Sheets",
+        description=description,
+        color=0x00ff00
+    )
+    await interaction.response.send_message(embed=embed)
+
+
 # Gunsmoke Frontline Management Commands
 @bot.tree.command(name='gunsmoke',
                   description='Manage Gunsmoke Frontline event system')
 @app_commands.describe(
     action='What action to perform',
     start_date=
-    'Start date for gunsmoke (YYYY-MM-DD format, Asia/Jakarta (UTC+7) timezone)',
+    'Start date for gunsmoke (YYYY-MM-DD format,UTC+7)',
     channel='Channel to add/remove for notifications')
 @app_commands.choices(action=[
     app_commands.Choice(name='status', value='status'),
@@ -468,7 +615,7 @@ async def slash_gunsmoke(interaction: discord.Interaction,
     # Check permissions (only server moderators can manage)
     if not interaction.user.guild_permissions.manage_channels:
         await interaction.response.send_message(
-            "❌ You need 'Manage Channels' permission to use this command!",
+            "Sorry you're not allowed to do that!",
             ephemeral=True)
         return
 
@@ -477,44 +624,44 @@ async def slash_gunsmoke(interaction: discord.Interaction,
     if action == 'status':
         status, start_time, end_time = get_gunsmoke_status(config)
 
-        embed = discord.Embed(title="🎯 Gunsmoke Frontline Status",
+        embed = discord.Embed(title="Gunsmoke Frontline Status",
                               color=0x00ff00)
         embed.add_field(
             name="System",
-            value="🟢 Enabled" if config['enabled'] else "🔴 Disabled",
+            value="Enabled" if config['enabled'] else "Disabled",
             inline=True)
 
         if status:
             if status == "active":
                 embed.add_field(name="Current Status",
-                                value="🔥 **ACTIVE**",
+                                value="**ACTIVE**",
                                 inline=True)
                 embed.add_field(name="Ends",
                                 value=end_time.strftime(
-                                    '%Y-%m-%d %H:%M Asia/Jakarta (UTC+7)'),
+                                    '%Y-%m-%d %H:%M (UTC+7)'),
                                 inline=True)
             elif status == "upcoming":
                 embed.add_field(name="Current Status",
-                                value="⏳ Upcoming",
+                                value="Upcoming",
                                 inline=True)
                 embed.add_field(name="Starts",
                                 value=start_time.strftime(
-                                    '%Y-%m-%d %H:%M Asia/Jakarta (UTC+7)'),
+                                    '%Y-%m-%d %H:%M (UTC+7)'),
                                 inline=True)
             else:
                 embed.add_field(name="Current Status",
-                                value="⚫ Ended",
+                                value="Ended",
                                 inline=True)
         else:
             embed.add_field(name="Current Status",
-                            value="❌ Not Scheduled",
+                            value="Not Scheduled",
                             inline=True)
 
         embed.add_field(name="Notification Channels",
                         value=str(len(config['notification_channels'])),
                         inline=True)
         embed.add_field(name="Reset Time",
-                        value="16:00 Asia/Jakarta (UTC+7) Time",
+                        value="16:00 (UTC+7) Time",
                         inline=True)
 
         await interaction.response.send_message(embed=embed)
@@ -523,18 +670,18 @@ async def slash_gunsmoke(interaction: discord.Interaction,
         config['enabled'] = True
         save_gunsmoke_config(config)
         await interaction.response.send_message(
-            "✅ Gunsmoke Frontline system enabled!")
+            "Gunsmoke Frontline system enabled!")
 
     elif action == 'disable':
         config['enabled'] = False
         save_gunsmoke_config(config)
         await interaction.response.send_message(
-            "❌ Gunsmoke Frontline system disabled!")
+            "Gunsmoke Frontline system disabled!")
 
     elif action == 'set_start':
         if not start_date:
             await interaction.response.send_message(
-                "❌ Please provide a start date in YYYY-MM-DD format!")
+                "Please provide a start date in YYYY-MM-DD format!")
             return
 
         try:
@@ -551,16 +698,16 @@ async def slash_gunsmoke(interaction: discord.Interaction,
             save_gunsmoke_config(config)
 
             await interaction.response.send_message(
-                f"✅ Gunsmoke Frontline start date set to: **{start_datetime.strftime('%Y-%m-%d %H:%M')} Asia/Jakarta (UTC+7)**"
+                f"Gunsmoke Frontline start date set to: **{start_datetime.strftime('%Y-%m-%d %H:%M')} (UTC+7)**"
             )
         except ValueError:
             await interaction.response.send_message(
-                "❌ Invalid date format! Use YYYY-MM-DD (e.g., 2024-12-25)")
+                "Invalid date format! Use YYYY-MM-DD (e.g., 2024-12-25)")
 
     elif action == 'add_channel':
         if not channel:
             await interaction.response.send_message(
-                "❌ Please specify a channel to add!")
+                "Please specify a channel to add!")
             return
 
         channel_id = str(channel.id)
@@ -568,15 +715,15 @@ async def slash_gunsmoke(interaction: discord.Interaction,
             config['notification_channels'].append(channel_id)
             save_gunsmoke_config(config)
             await interaction.response.send_message(
-                f"✅ Added {channel.mention} to Gunsmoke notifications!")
+                f"Added {channel.mention} to Gunsmoke notifications!")
         else:
             await interaction.response.send_message(
-                f"ℹ️ {channel.mention} is already in the notification list!")
+                f"{channel.mention} is already in the notification list!")
 
     elif action == 'remove_channel':
         if not channel:
             await interaction.response.send_message(
-                "❌ Please specify a channel to remove!")
+                "Please specify a channel to remove!")
             return
 
         channel_id = str(channel.id)
@@ -584,15 +731,15 @@ async def slash_gunsmoke(interaction: discord.Interaction,
             config['notification_channels'].remove(channel_id)
             save_gunsmoke_config(config)
             await interaction.response.send_message(
-                f"✅ Removed {channel.mention} from Gunsmoke notifications!")
+                f"Removed {channel.mention} from Gunsmoke notifications!")
         else:
             await interaction.response.send_message(
-                f"ℹ️ {channel.mention} is not in the notification list!")
+                f"{channel.mention} is not in the notification list!")
 
     elif action == 'list_channels':
         if not config['notification_channels']:
             await interaction.response.send_message(
-                "ℹ️ No notification channels configured!")
+                "No notification channels configured!")
             return
 
         channels_list = []
@@ -603,7 +750,7 @@ async def slash_gunsmoke(interaction: discord.Interaction,
             else:
                 channels_list.append(f"Unknown Channel ({channel_id})")
 
-        embed = discord.Embed(title="📢 Gunsmoke Notification Channels",
+        embed = discord.Embed(title="Gunsmoke Notification Channels",
                               description="\n".join(channels_list),
                               color=0x00ff00)
         await interaction.response.send_message(embed=embed)
