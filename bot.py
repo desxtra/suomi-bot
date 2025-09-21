@@ -162,15 +162,9 @@ async def gunsmoke_reminder():
                 if config.get('last_notification_sent') != f"{current_date}_day1":
                     await send_gunsmoke_notification(
                         config['notification_channels'],
-<<<<<<< HEAD
                         "**First Day of Gunsmoke Frontline!**\n\n"
                         "Everyone, it's time to shine! Let's make today count and score some points!\n"
                         "Remember, Gunsmoke ends 3 hours before reset."
-=======
-                        "🎉 **First Day of Gunsmoke Frontline!** 🎉\n\n"
-                        "Platoon, it's time to shine! Let's make today count and score some points!\n"
-                        "Remember, Gunsmoke ends 3 hours before reset at 16:00 Asia/Jakarta (UTC+7) Time."
->>>>>>> 259b11f62c6aa23e14f2fbfd897039e273ba8835
                     )
                     config['last_notification_sent'] = f"{current_date}_day1"
                     save_gunsmoke_config(config)
@@ -180,15 +174,9 @@ async def gunsmoke_reminder():
                 if config.get('last_notification_sent') != f"{current_date}_day2":
                     await send_gunsmoke_notification(
                         config['notification_channels'],
-<<<<<<< HEAD
                         "**Second Day of Gunsmoke Frontline!**\n\n"
                         "Keep up the great work and aim for even higher scores!\n"
                         "Remember, Gunsmoke ends 3 hours before reset."
-=======
-                        "🔥 **Second Day of Gunsmoke Frontline!** 🔥\n\n"
-                        "Platoon, we're halfway through! Keep up the great work and aim for even higher scores!\n"
-                        "Remember, Gunsmoke ends 3 hours before reset at 16:00 Asia/Jakarta (UTC+7) Time."
->>>>>>> 259b11f62c6aa23e14f2fbfd897039e273ba8835
                     )
                     config['last_notification_sent'] = f"{current_date}_day2"
                     save_gunsmoke_config(config)
@@ -198,15 +186,9 @@ async def gunsmoke_reminder():
                 if config.get('last_notification_sent') != f"{current_date}_day3":
                     await send_gunsmoke_notification(
                         config['notification_channels'],
-<<<<<<< HEAD
                         "**Third Day of Gunsmoke Frontline!**\n\n"
                         "Let's push for even better results today!\n"
                         "Remember, Gunsmoke ends 3 hours before reset."
-=======
-                        "💪 **Third Day of Gunsmoke Frontline!** 💪\n\n"
-                        "Platoon, we're making progress! Let's push for even better results today!\n"
-                        "Remember, Gunsmoke ends 3 hours before reset at 16:00 Asia/Jakarta (UTC+7) Time."
->>>>>>> 259b11f62c6aa23e14f2fbfd897039e273ba8835
                     )
                     config['last_notification_sent'] = f"{current_date}_day3"
                     save_gunsmoke_config(config)
@@ -216,15 +198,9 @@ async def gunsmoke_reminder():
                 if config.get('last_notification_sent') != f"{current_date}_day4":
                     await send_gunsmoke_notification(
                         config['notification_channels'],
-<<<<<<< HEAD
                         "**Fourth Day of Gunsmoke Frontline!**\n\n"
                         "Let's aim for some great scores today!\n"
                         "Remember, Gunsmoke ends 3 hours before reset."
-=======
-                        "🏆 **Fourth Day of Gunsmoke Frontline!** 🏆\n\n"
-                        "Platoon, we're getting closer to the end! Let's aim for some great scores today!\n"
-                        "Remember, Gunsmoke ends 3 hours before reset at 16:00 Asia/Jakarta (UTC+7) Time."
->>>>>>> 259b11f62c6aa23e14f2fbfd897039e273ba8835
                     )
                     config['last_notification_sent'] = f"{current_date}_day4"
                     save_gunsmoke_config(config)
@@ -234,15 +210,9 @@ async def gunsmoke_reminder():
                 if config.get('last_notification_sent') != f"{current_date}_day5":
                     await send_gunsmoke_notification(
                         config['notification_channels'],
-<<<<<<< HEAD
                         "**Fifth Day of Gunsmoke Frontline!**\n\n"
                         "Let's make the most of today and aim for some great scores!\n"
                         "Remember, Gunsmoke ends 3 hours before reset."
-=======
-                        "🎯 **Fifth Day of Gunsmoke Frontline!** 🎯\n\n"
-                        "Platoon, we're almost there! Let's make the most of today and aim for some great scores!\n"
-                        "Remember, Gunsmoke ends 3 hours before reset at 16:00 Asia/Jakarta (UTC+7) Time."
->>>>>>> 259b11f62c6aa23e14f2fbfd897039e273ba8835
                     )
                     config['last_notification_sent'] = f"{current_date}_day5"
                     save_gunsmoke_config(config)
@@ -252,15 +222,9 @@ async def gunsmoke_reminder():
                 if config.get('last_notification_sent') != f"{current_date}_day6":
                     await send_gunsmoke_notification(
                         config['notification_channels'],
-<<<<<<< HEAD
                         "**Sixth Day of Gunsmoke Frontline!**\n\n"
                         "Let's make today count and aim for some great scores!\n"
                         "Remember, Gunsmoke ends 3 hours before reset."
-=======
-                        "🎉 **Sixth Day of Gunsmoke Frontline!** 🎉\n\n"
-                        "Platoon, we're on the final stretch! Let's make today count and aim for some great scores!\n"
-                        "Remember, Gunsmoke ends 3 hours before reset at 16:00 Asia/Jakarta (UTC+7) Time."
->>>>>>> 259b11f62c6aa23e14f2fbfd897039e273ba8835
                     )
                     config['last_notification_sent'] = f"{current_date}_day6"
                     save_gunsmoke_config(config)
@@ -270,15 +234,9 @@ async def gunsmoke_reminder():
                 if config.get('last_notification_sent') != f"{current_date}_lastday":
                     await send_gunsmoke_notification(
                         config['notification_channels'],
-<<<<<<< HEAD
                         "**Last Day of Gunsmoke Frontline!**\n\n"
                         "It's the final day! Let's make it count and aim for some great scores!\n"
                         "Remember, Gunsmoke ends 3 hours before reset."
-=======
-                        "🎉 **Last Day of Gunsmoke Frontline!** 🎉\n\n"
-                        "Platoon, it's the final day! Let's make it count and aim for some great scores!\n"
-                        "Remember, Gunsmoke ends 3 hours before reset at 16:00 Asia/Jakarta (UTC+7) Time."
->>>>>>> 259b11f62c6aa23e14f2fbfd897039e273ba8835
                     )
                     config['last_notification_sent'] = f"{current_date}_lastday"
                     save_gunsmoke_config(config)
@@ -329,14 +287,8 @@ async def gunsmoke_reminder():
                 if config.get('last_notification_sent') != f"{current_date}_2days":
                     await send_gunsmoke_notification(
                         config['notification_channels'],
-<<<<<<< HEAD
                         "**Gunsmoke Frontline is coming in 2 days!**\n\n"
                         "Everyone, get ready to shine! Let's make the most of this event and aim for some great scores!\n"
-=======
-                        "🎯 **Gunsmoke Frontline is coming in 2 days!** 🎯\n\n"
-                        "Platoon, get ready to shine! Let's make the most of this event and aim for some great scores!\n"
-                        "Gunsmoke will start at 16:00 Asia/Jakarta (UTC+7) Time."
->>>>>>> 259b11f62c6aa23e14f2fbfd897039e273ba8835
                     )
                     config['last_notification_sent'] = f"{current_date}_2days"
                     save_gunsmoke_config(config)
@@ -346,14 +298,8 @@ async def gunsmoke_reminder():
                 if config.get('last_notification_sent') != f"{current_date}_1day":
                     await send_gunsmoke_notification(
                         config['notification_channels'],
-<<<<<<< HEAD
                         "**Gunsmoke Frontline is coming tomorrow!**\n\n"
                         "Everyone, get ready to shine! Let's make the most of this event and aim for some great scores!\n"   
-=======
-                        "🎯 **Gunsmoke Frontline is coming tomorrow!** 🎯\n\n"
-                        "Platoon, get ready to shine! Let's make the most of this event and aim for some great scores!\n"
-                        "Gunsmoke will start at 16:00 Asia/Jakarta (UTC+7) Time."
->>>>>>> 259b11f62c6aa23e14f2fbfd897039e273ba8835
                     )
                     config['last_notification_sent'] = f"{current_date}_1day"
                     save_gunsmoke_config(config)
@@ -363,14 +309,8 @@ async def gunsmoke_reminder():
                 if config.get('last_notification_sent') != f"{current_date}_today":
                     await send_gunsmoke_notification(
                         config['notification_channels'],
-<<<<<<< HEAD
                         "**Gunsmoke Frontline is starting today!**\n\n"
                         "Everyone, get ready to shine! Let's make the most of this event and aim for some great scores!\n"
-=======
-                        "🎯 **Gunsmoke Frontline is starting today!** 🎯\n\n"
-                        "Platoon, get ready to shine! Let's make the most of this event and aim for some great scores!\n"
-                        "Gunsmoke will start at 16:00 Asia/Jakarta (UTC+7) Time."
->>>>>>> 259b11f62c6aa23e14f2fbfd897039e273ba8835
                     )
                     config['last_notification_sent'] = f"{current_date}_today"
                     save_gunsmoke_config(config)
@@ -385,15 +325,9 @@ async def gunsmoke_reminder():
 
             await send_gunsmoke_notification(
                 config['notification_channels'],
-<<<<<<< HEAD
                 f"**Next Gunsmoke Frontline scheduled!**\n\n"
                 f"Next event starts: **{next_start.strftime('%Y-%m-%d %H:%M')} (UTC+7) Time**\n"
                 f"Get ready Everyone!"
-=======
-                f"📅 **Next Gunsmoke Frontline scheduled!**\n\n"
-                f"Next event starts: **{next_start.strftime('%Y-%m-%d %H:%M')} Asia/Jakarta (UTC+7) Time**\n"
-                f"Get ready platoon!"
->>>>>>> 259b11f62c6aa23e14f2fbfd897039e273ba8835
             )
 
     except Exception as e:
@@ -504,21 +438,13 @@ async def handle_ai_response(message):
 
                 # Fallback response when Character.AI fails
                 await message.reply(
-<<<<<<< HEAD
                     f"I heard you say: '{user_message}'\n\But sorry, I can't think anything. I'll try to fix this... :D"
-=======
-                    f"I heard you say: '{user_message}'\n\But sorry, I can't think anything. I'll try fix this... :D"
->>>>>>> 259b11f62c6aa23e14f2fbfd897039e273ba8835
                 )
 
     except Exception as e:
         logger.error(f"Error generating AI response: {e}")
         await message.reply(
-<<<<<<< HEAD
             "Sorry, my brain explode while trying to talk with you. T_T")
-=======
-            "Sorry, my brain crashes while trying to talk with you. T_T")
->>>>>>> 259b11f62c6aa23e14f2fbfd897039e273ba8835
 
 
 @bot.command(name='chat')
@@ -644,7 +570,6 @@ async def slash_help(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed)
 
 
-<<<<<<< HEAD
 @bot.tree.command(name='sheets', description='Get a link to important sheets')
 async def slash_sheets(interaction: discord.Interaction):
     """Slash command to get links to important Google Sheets"""
@@ -661,15 +586,6 @@ async def slash_sheets(interaction: discord.Interaction):
         description=description,
         color=0x00ff00
     )
-=======
-@bot.tree.command(name='sheets', description='Get a link to the Gunsmoke Frontline Google Sheet')
-async def slash_sheets(interaction: discord.Interaction):
-    """Slash command to get a link to the Gunsmoke Frontline Google Sheet"""
-    sheet_url = "https://docs.google.com/spreadsheets/d/1-ElgYSa6DscI9FsodU1S3gxLy3Xk7TwrN4IDpnqQfxo/edit?gid=1527363414#gid=1527363414"
-    embed = discord.Embed(title="Alaris Awesome Support Sheet",
-                          description=f"[Really Awesome Sheet]({sheet_url})",
-                          color=0x00ff00)
->>>>>>> 259b11f62c6aa23e14f2fbfd897039e273ba8835
     await interaction.response.send_message(embed=embed)
 
 
