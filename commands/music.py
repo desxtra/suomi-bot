@@ -6,17 +6,31 @@ from discord import app_commands
 from discord.ext import commands
 import yt_dlp
 import urllib.parse
+import random
+import os
+import time
+import glob
+import aiofiles
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+# Create cache directory
+CACHE_DIR = "./music_cache"
+os.makedirs(CACHE_DIR, exist_ok=True)
+
+# Cache cleanup settings
+CACHE_MAX_AGE = 3600  # 1 hour in seconds
+CACHE_MAX_SIZE = 500 * 1024 * 1024  # 500 MB
 
 # YouTube DL options for audio only with better YouTube Music support
 ytdl_format_options = {
     'format': 'bestaudio/best',
-    'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
+    'outtmpl': os.path.join(CACHE_DIR, '%(extractor)s-%(id)s-%(title)s.%(ext)s'),
     'restrictfilenames': True,
-    'noplaylist': True,
+    'noplaylist': False,
     'nocheckcertificate': True,
-    'ignoreerrors': False,
+    'ignoreerrors': True,
     'logtostderr': False,
     'quiet': True,
     'no_warnings': True,
@@ -26,17 +40,38 @@ ytdl_format_options = {
     'audioformat': 'mp3',
     'extract_flat': False,
     'youtube_include_dash_manifest': False,
+    'socket_timeout': 30,
+    'retries': 10,
+    'fragment_retries': 10,
+    'skip_unavailable_fragments': True,
+    'continue_dl': True,
 }
 
 ffmpeg_options = {
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -probesize 10M',
+    'before_options': (
+        '-reconnect 1 '
+        '-reconnect_streamed 1 '
+        '-reconnect_delay_max 30 '
+        '-timeout 30000000 '
+        '-protocol_whitelist "file,http,https,tcp,tls" '
+        '-probesize 32M '
+        '-analyzeduration 0 '
+        '-nostdin '
+        '-multiple_requests 1 '
+        '-user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"'
+    ),
+    'options': '-vn -bufsize 1024k -af "volume=0.5"'
+}
+
+ffmpeg_local_options = {
+    'before_options': '-nostdin',
     'options': '-vn -bufsize 512k'
 }
 
 ytdl = yt_dlp.YoutubeDL(ytdl_format_options)
 
 class YTDLSource(discord.PCMVolumeTransformer):
-    def __init__(self, source, *, data, volume=0.5):
+    def __init__(self, source, *, data, volume=0.5, is_cached=False):
         super().__init__(source, volume)
         self.data = data
         self.title = data.get('title')
@@ -44,36 +79,78 @@ class YTDLSource(discord.PCMVolumeTransformer):
         self.duration = self.parse_duration(data.get('duration'))
         self.thumbnail = data.get('thumbnail')
         self.uploader = data.get('uploader')
+        self.video_id = data.get('id')
+        self.is_cached = is_cached
+        self.filename = None
 
     @classmethod
-    async def from_url(cls, url, *, loop=None, stream=False):
+    async def from_url(cls, url, *, loop=None, stream=False, fallback_to_download=True):
         loop = loop or asyncio.get_event_loop()
-        
+
         # Clean the URL/search query
         if not url.startswith(('http', 'ytsearch:')):
-            # Use ytsearch for regular searches
             url = f"ytsearch:{url}"
-        
-        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
-        
-        if 'entries' in data:
-            # Take first item from a playlist or search results
-            data = data['entries'][0]
-        
-        filename = data['url'] if stream else ytdl.prepare_filename(data)
-        return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
+
+        try:
+            # Try streaming first if requested
+            if stream:
+                try:
+                    data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))
+                    if 'entries' in data:
+                        data = data['entries'][0]
+                    
+                    filename = data['url']
+                    source = cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data, is_cached=False)
+                    logger.info(f"Streaming audio: {source.title}")
+                    return source
+                except Exception as stream_error:
+                    logger.warning(f"Streaming failed for {url}, falling back to download: {stream_error}")
+                    if not fallback_to_download:
+                        raise stream_error
+                    # Fall through to download
+
+            # Download the audio
+            data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=True))
+            if 'entries' in data:
+                data = data['entries'][0]
+
+            filename = ytdl.prepare_filename(data)
+            source = cls(discord.FFmpegPCMAudio(filename, **ffmpeg_local_options), data=data, is_cached=True)
+            source.filename = filename
+            logger.info(f"Using cached/downloaded audio: {source.title}")
+            return source
+
+        except Exception as e:
+            logger.error(f"Error in from_url for {url}: {e}")
+            raise
+
+    @classmethod
+    async def from_video_id(cls, video_id, *, loop=None, stream=False, fallback_to_download=True):
+        """Create source directly from video ID for radio mode"""
+        loop = loop or asyncio.get_event_loop()
+        url = f"https://www.youtube.com/watch?v={video_id}"
+        return await cls.from_url(url, loop=loop, stream=stream, fallback_to_download=fallback_to_download)
 
     def parse_duration(self, duration_seconds):
         if not duration_seconds:
             return "Unknown"
-        
+
         minutes, seconds = divmod(int(duration_seconds), 60)
         hours, minutes = divmod(minutes, 60)
-        
+
         if hours > 0:
             return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
         else:
             return f"{minutes:02d}:{seconds:02d}"
+
+    def cleanup(self):
+        """Remove cached file if it exists"""
+        if self.is_cached and self.filename and os.path.exists(self.filename):
+            try:
+                os.remove(self.filename)
+                logger.info(f"Cleaned up cached file: {self.filename}")
+            except Exception as e:
+                logger.error(f"Error cleaning up file {self.filename}: {e}")
 
 class MusicQueue:
     def __init__(self):
@@ -81,69 +158,262 @@ class MusicQueue:
         self.current_song = None
         self.loop = False
         self.now_playing_channel = None
-    
+        self.radio_mode = False
+        self.radio_seed = None
+
     def add(self, song):
         self._queue.append(song)
-    
+
     def next(self):
         if self.loop and self.current_song:
             return self.current_song
-        
+
+        # Clean up previous song
+        if self.current_song:
+            self.current_song.cleanup()
+
         if self._queue:
             self.current_song = self._queue.pop(0)
             return self.current_song
         return None
-    
+
     def clear(self):
+        # Clean up all songs in queue
+        for song in self._queue:
+            if hasattr(song, 'cleanup'):
+                song.cleanup()
+        if self.current_song:
+            self.current_song.cleanup()
+            
         self._queue.clear()
         self.current_song = None
-    
+        self.radio_mode = False
+        self.radio_seed = None
+
     def remove(self, index):
         if 0 <= index < len(self._queue):
-            return self._queue.pop(index)
+            song = self._queue.pop(index)
+            if hasattr(song, 'cleanup'):
+                song.cleanup()
+            return song
         return None
-    
+
     def get_queue(self):
         return self._queue.copy()
-    
+
     def __len__(self):
         return len(self._queue)
 
 class MusicCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.queues = {}  # guild_id -> MusicQueue
-        self.voice_clients = {}  # guild_id -> voice_client
-    
+        self.queues = {}
+        self.voice_clients = {}
+        self.cleanup_task = None
+        
+    async def cog_load(self):
+        """Start cleanup task when cog loads"""
+        self.cleanup_task = self.bot.loop.create_task(self.periodic_cache_cleanup())
+
+    async def cog_unload(self):
+        """Stop cleanup task when cog unloads"""
+        if self.cleanup_task:
+            self.cleanup_task.cancel()
+            try:
+                await self.cleanup_task
+            except asyncio.CancelledError:
+                pass
+
+    async def periodic_cache_cleanup(self):
+        """Periodically clean up old cache files"""
+        await self.bot.wait_until_ready()
+        while not self.bot.is_closed():
+            try:
+                await self.cleanup_old_cache()
+                await asyncio.sleep(3600)  # Run every hour
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Error in cache cleanup: {e}")
+                await asyncio.sleep(300)  # Wait 5 minutes on error
+
+    async def cleanup_old_cache(self):
+        """Remove cache files older than CACHE_MAX_AGE"""
+        try:
+            current_time = time.time()
+            deleted_count = 0
+            total_size = 0
+
+            for file_path in glob.glob(os.path.join(CACHE_DIR, "*")):
+                if os.path.isfile(file_path):
+                    file_age = current_time - os.path.getmtime(file_path)
+                    file_size = os.path.getsize(file_path)
+                    total_size += file_size
+
+                    # Delete if too old or if cache is too large
+                    if file_age > CACHE_MAX_AGE or total_size > CACHE_MAX_SIZE:
+                        try:
+                            os.remove(file_path)
+                            deleted_count += 1
+                            logger.info(f"Cleaned up old cache file: {file_path}")
+                        except Exception as e:
+                            logger.error(f"Error deleting cache file {file_path}: {e}")
+
+            if deleted_count > 0:
+                logger.info(f"Cleaned up {deleted_count} old cache files")
+
+        except Exception as e:
+            logger.error(f"Error in cleanup_old_cache: {e}")
+
     def get_queue(self, guild_id):
         if guild_id not in self.queues:
             self.queues[guild_id] = MusicQueue()
         return self.queues[guild_id]
-    
+
+    async def get_related_videos(self, video_id, count=5):
+        """Get related videos for radio mode"""
+        try:
+            loop = asyncio.get_event_loop()
+            url = f"https://www.youtube.com/watch?v={video_id}"
+
+            data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))
+
+            related_videos = []
+            if 'related_videos' in data:
+                related_videos = data['related_videos'][:count]
+            elif 'entries' in data and len(data['entries']) > 1:
+                related_videos = data['entries'][1:1+count]
+
+            return [video.get('id') for video in related_videos if video.get('id')]
+        except Exception as e:
+            logger.error(f"Error getting related videos: {e}")
+            return []
+
+    async def search_related_music(self, query, count=5):
+        """Search for music related to the query for radio mode"""
+        try:
+            loop = asyncio.get_event_loop()
+            search_url = f"ytsearch{count}:{query}"
+
+            data = await loop.run_in_executor(None, lambda: ytdl.extract_info(search_url, download=False))
+
+            if 'entries' in data:
+                return [entry.get('id') for entry in data['entries'] if entry.get('id')]
+            return []
+        except Exception as e:
+            logger.error(f"Error searching related music: {e}")
+            return []
+
+    async def add_radio_songs(self, guild_id, seed_video_id=None, seed_query=None):
+        """Add radio songs to the queue based on seed"""
+        queue = self.get_queue(guild_id)
+
+        if not queue.radio_mode:
+            return
+
+        try:
+            video_ids = []
+
+            if seed_video_id:
+                video_ids = await self.get_related_videos(seed_video_id, 3)
+            elif seed_query:
+                video_ids = await self.search_related_music(seed_query, 3)
+
+            # Add videos to queue with download fallback
+            for video_id in video_ids:
+                try:
+                    player = await YTDLSource.from_video_id(
+                        video_id, 
+                        loop=self.bot.loop, 
+                        stream=True,  # Try streaming first for radio
+                        fallback_to_download=True
+                    )
+                    queue.add(player)
+                    logger.info(f"Added radio song: {player.title} (cached: {player.is_cached})")
+                except Exception as e:
+                    logger.error(f"Error adding radio song {video_id}: {e}")
+                    continue
+
+            # Fallback search
+            if not video_ids and seed_query:
+                fallback_query = f"music {seed_query}" if len(seed_query.split()) < 3 else seed_query
+                fallback_ids = await self.search_related_music(fallback_query, 3)
+                for video_id in fallback_ids:
+                    try:
+                        player = await YTDLSource.from_video_id(
+                            video_id, 
+                            loop=self.bot.loop, 
+                            stream=True,
+                            fallback_to_download=True
+                        )
+                        queue.add(player)
+                        logger.info(f"Added fallback radio song: {player.title} (cached: {player.is_cached})")
+                    except Exception as e:
+                        logger.error(f"Error adding fallback radio song {video_id}: {e}")
+                        continue
+
+            # Send notification
+            if queue.now_playing_channel and (video_ids or fallback_ids):
+                added_count = len([v for v in video_ids + (fallback_ids or []) if v])
+                embed = discord.Embed(
+                    title="🎵 Radio Mode",
+                    description=f"Added {added_count} related songs to the queue!",
+                    color=0x00ff00
+                )
+                await queue.now_playing_channel.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Error in add_radio_songs: {e}")
+
     async def play_next(self, guild_id, error=None):
         if error:
             logger.error(f"Player error: {error}")
-        
+
         queue = self.get_queue(guild_id)
         voice_client = self.voice_clients.get(guild_id)
-        
+
         if not voice_client:
             return
-        
+
         next_song = queue.next()
+
+        # Radio mode handling
+        if not next_song and queue.radio_mode:
+            if queue.now_playing_channel:
+                embed = discord.Embed(
+                    title="🎵 Radio Mode",
+                    description="Finding related songs...",
+                    color=0xffff00
+                )
+                await queue.now_playing_channel.send(embed=embed)
+
+            seed_video_id = queue.current_song.video_id if queue.current_song else None
+            seed_query = queue.radio_seed
+
+            await self.add_radio_songs(guild_id, seed_video_id, seed_query)
+            next_song = queue.next()
+
         if next_song:
             try:
                 voice_client.play(next_song, after=lambda e: asyncio.run_coroutine_threadsafe(self.play_next(guild_id, e), self.bot.loop))
-                
+
                 # Update now playing message
                 if queue.now_playing_channel:
+                    radio_indicator = " 📻" if queue.radio_mode else ""
+                    cache_indicator = " 💾" if next_song.is_cached else " 🌐"
                     embed = discord.Embed(
-                        title="🎵 Now Playing",
+                        title=f"🎵 Now Playing{radio_indicator}{cache_indicator}",
                         description=f"**{next_song.title}**\n👤 **Uploader:** {next_song.uploader}\n⏱️ **Duration:** {next_song.duration}",
                         color=0x00ff00
                     )
                     if next_song.thumbnail:
                         embed.set_thumbnail(url=next_song.thumbnail)
+
+                    if queue.radio_mode:
+                        embed.set_footer(text="Radio mode is active - related songs will play automatically")
+                    if next_song.is_cached:
+                        embed.set_footer(text=(embed.footer.text + " | Using cached audio" if embed.footer.text else "Using cached audio"))
+
                     await queue.now_playing_channel.send(embed=embed)
             except Exception as e:
                 logger.error(f"Error playing next song: {e}")
@@ -153,11 +423,19 @@ class MusicCommands(commands.Cog):
             if voice_client.is_connected():
                 voice_client.stop()
             if queue.now_playing_channel:
-                embed = discord.Embed(
-                    title="🎵 Queue Finished",
-                    description="The queue is empty! Add more songs to keep the music going!",
-                    color=0xffff00
-                )
+                if queue.radio_mode:
+                    embed = discord.Embed(
+                        title="🎵 Radio Mode Issue",
+                        description="Could not find related songs. Radio mode has been disabled.",
+                        color=0xff0000
+                    )
+                    queue.radio_mode = False
+                else:
+                    embed = discord.Embed(
+                        title="🎵 Queue Finished",
+                        description="The queue is empty! Add more songs to keep the music going!",
+                        color=0xffff00
+                    )
                 await queue.now_playing_channel.send(embed=embed)
 
     @app_commands.command(name='play', description='Play music from YouTube')
@@ -166,20 +444,18 @@ class MusicCommands(commands.Cog):
         """Play music from YouTube"""
         try:
             await interaction.response.defer()
-            
-            # Check if user is in a voice channel
+
             if not interaction.user.voice:
                 await interaction.followup.send("❌ You need to be in a voice channel to play music!")
                 return
-            
+
             voice_channel = interaction.user.voice.channel
-            
-            # Check permissions
+
             if not voice_channel.permissions_for(interaction.guild.me).connect:
                 await interaction.followup.send("❌ I don't have permission to join your voice channel!")
                 return
-            
-            # Connect to voice channel if not already connected
+
+            # Connect to voice channel
             voice_client = self.voice_clients.get(interaction.guild_id)
             if not voice_client or not voice_client.is_connected():
                 try:
@@ -189,17 +465,24 @@ class MusicCommands(commands.Cog):
                     logger.error(f"Error connecting to voice channel: {e}")
                     await interaction.followup.send("❌ Could not connect to the voice channel!")
                     return
-            
-            # Search and play
+
+            # Search and play with streaming first, fallback to download
             try:
-                player = await YTDLSource.from_url(query, loop=self.bot.loop, stream=True)
+                player = await YTDLSource.from_url(
+                    query, 
+                    loop=self.bot.loop, 
+                    stream=True,  # Try streaming first
+                    fallback_to_download=True  # Fallback to download if streaming fails
+                )
+                
                 queue = self.get_queue(interaction.guild_id)
                 queue.now_playing_channel = interaction.channel
-                
+
                 if voice_client.is_playing() or voice_client.is_paused():
                     queue.add(player)
+                    cache_indicator = " 💾" if player.is_cached else " 🌐"
                     embed = discord.Embed(
-                        title="🎵 Added to Queue",
+                        title=f"🎵 Added to Queue{cache_indicator}",
                         description=f"**{player.title}**\n👤 **Uploader:** {player.uploader}\n⏱️ **Duration:** {player.duration}\n📋 **Position in queue:** {len(queue)}",
                         color=0x00ff00
                     )
@@ -209,15 +492,47 @@ class MusicCommands(commands.Cog):
                 else:
                     queue.add(player)
                     await self.play_next(interaction.guild_id)
-                    await interaction.followup.send("🎵 Starting playback...")
-                    
+                    cache_indicator = " 💾" if player.is_cached else " 🌐"
+                    await interaction.followup.send(f"🎵 Starting playback...{cache_indicator}")
+
             except Exception as e:
                 logger.error(f"Error playing music: {e}")
                 await interaction.followup.send("❌ Could not play the requested song. Please try a different one.")
-                
+
         except Exception as e:
             logger.error(f"Error in play command: {e}")
             await interaction.followup.send("❌ An error occurred while trying to play music.")
+
+    @app_commands.command(name='radio', description='Toggle radio mode (automatically play related songs)')
+    async def slash_radio(self, interaction: discord.Interaction):
+        """Toggle radio mode"""
+        try:
+            queue = self.get_queue(interaction.guild_id)
+            queue.radio_mode = not queue.radio_mode
+
+            if queue.radio_mode:
+                if queue.current_song:
+                    queue.radio_seed = queue.current_song.title
+                else:
+                    queue.radio_seed = "music"
+
+                embed = discord.Embed(
+                    title="📻 Radio Mode Enabled",
+                    description="The bot will automatically play related songs when the queue ends!\nUse `/radio` again to disable.",
+                    color=0x00ff00
+                )
+            else:
+                embed = discord.Embed(
+                    title="📻 Radio Mode Disabled",
+                    description="Automatic song playback has been disabled.",
+                    color=0xffff00
+                )
+
+            await interaction.response.send_message(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Error in radio command: {e}")
+            await interaction.response.send_message("❌ An error occurred while toggling radio mode.", ephemeral=True)
 
     @app_commands.command(name='skip', description='Skip the current song')
     async def slash_skip(self, interaction: discord.Interaction):
@@ -227,17 +542,17 @@ class MusicCommands(commands.Cog):
             if not voice_client or not voice_client.is_playing():
                 await interaction.response.send_message("❌ No music is currently playing!", ephemeral=True)
                 return
-            
+
             current_song = self.get_queue(interaction.guild_id).current_song
             voice_client.stop()
-            
+
             embed = discord.Embed(
                 title="⏭️ Skipped Song",
                 description=f"Skipped: **{current_song.title}**",
                 color=0xffff00
             )
             await interaction.response.send_message(embed=embed)
-            
+
         except Exception as e:
             logger.error(f"Error in skip command: {e}")
             await interaction.response.send_message("❌ An error occurred while skipping.", ephemeral=True)
@@ -248,19 +563,19 @@ class MusicCommands(commands.Cog):
         try:
             voice_client = self.voice_clients.get(interaction.guild_id)
             queue = self.get_queue(interaction.guild_id)
-            
+
             if voice_client:
                 voice_client.stop()
-            
+
             queue.clear()
-            
+
             embed = discord.Embed(
                 title="⏹️ Stopped Music",
                 description="Stopped the music and cleared the queue!",
                 color=0xff0000
             )
             await interaction.response.send_message(embed=embed)
-            
+
         except Exception as e:
             logger.error(f"Error in stop command: {e}")
             await interaction.response.send_message("❌ An error occurred while stopping.", ephemeral=True)
@@ -270,36 +585,40 @@ class MusicCommands(commands.Cog):
         """Show the current queue"""
         try:
             queue = self.get_queue(interaction.guild_id)
-            
+
             if len(queue) == 0 and not queue.current_song:
                 await interaction.response.send_message("🎵 The queue is empty!")
                 return
-            
+
             embed = discord.Embed(title="🎵 Music Queue", color=0x00ff00)
-            
-            # Current song
+
+            if queue.radio_mode:
+                embed.set_footer(text="📻 Radio mode is active - related songs will play automatically")
+
             if queue.current_song:
+                radio_indicator = " 📻" if queue.radio_mode else ""
+                cache_indicator = " 💾" if queue.current_song.is_cached else " 🌐"
                 embed.add_field(
-                    name="Now Playing",
+                    name=f"Now Playing{radio_indicator}{cache_indicator}",
                     value=f"**{queue.current_song.title}**\n👤 {queue.current_song.uploader} | ⏱️ {queue.current_song.duration}",
                     inline=False
                 )
-            
-            # Upcoming songs
+
             if len(queue) > 0:
                 queue_text = ""
-                for i, song in enumerate(queue.get_queue()[:10]):  # Show first 10 songs
-                    queue_text += f"`{i+1}.` **{song.title}**\n👤 {song.uploader} | ⏱️ {song.duration}\n\n"
-                
+                for i, song in enumerate(queue.get_queue()[:10]):
+                    cache_indicator = " 💾" if song.is_cached else " 🌐"
+                    queue_text += f"`{i+1}.` **{song.title}**{cache_indicator}\n👤 {song.uploader} | ⏱️ {song.duration}\n\n"
+
                 if len(queue) > 10:
                     queue_text += f"\n...and {len(queue) - 10} more songs"
-                
+
                 embed.add_field(name="Up Next", value=queue_text, inline=False)
             else:
                 embed.add_field(name="Up Next", value="No songs in queue", inline=False)
-            
+
             await interaction.response.send_message(embed=embed)
-            
+
         except Exception as e:
             logger.error(f"Error in queue command: {e}")
             await interaction.response.send_message("❌ An error occurred while showing the queue.", ephemeral=True)
@@ -312,10 +631,10 @@ class MusicCommands(commands.Cog):
             if not voice_client or not voice_client.is_playing():
                 await interaction.response.send_message("❌ No music is currently playing!", ephemeral=True)
                 return
-            
+
             voice_client.pause()
             await interaction.response.send_message("⏸️ Paused the music!")
-            
+
         except Exception as e:
             logger.error(f"Error in pause command: {e}")
             await interaction.response.send_message("❌ An error occurred while pausing.", ephemeral=True)
@@ -328,10 +647,10 @@ class MusicCommands(commands.Cog):
             if not voice_client or not voice_client.is_paused():
                 await interaction.response.send_message("❌ No music is currently paused!", ephemeral=True)
                 return
-            
+
             voice_client.resume()
             await interaction.response.send_message("▶️ Resumed the music!")
-            
+
         except Exception as e:
             logger.error(f"Error in resume command: {e}")
             await interaction.response.send_message("❌ An error occurred while resuming.", ephemeral=True)
@@ -344,20 +663,19 @@ class MusicCommands(commands.Cog):
             if level < 1 or level > 100:
                 await interaction.response.send_message("❌ Volume must be between 1 and 100!", ephemeral=True)
                 return
-            
+
             voice_client = self.voice_clients.get(interaction.guild_id)
             if not voice_client or not voice_client.is_playing():
                 await interaction.response.send_message("❌ No music is currently playing!", ephemeral=True)
                 return
-            
-            # Convert to float between 0.0 and 1.0
+
             volume = level / 100.0
-            
+
             if voice_client.source:
                 voice_client.source.volume = volume
-            
+
             await interaction.response.send_message(f"🔊 Volume set to {level}%")
-            
+
         except Exception as e:
             logger.error(f"Error in volume command: {e}")
             await interaction.response.send_message("❌ An error occurred while adjusting volume.", ephemeral=True)
@@ -368,16 +686,16 @@ class MusicCommands(commands.Cog):
         try:
             voice_client = self.voice_clients.get(interaction.guild_id)
             queue = self.get_queue(interaction.guild_id)
-            
+
             if voice_client:
                 voice_client.stop()
                 await voice_client.disconnect()
                 del self.voice_clients[interaction.guild_id]
-            
+
             queue.clear()
-            
+
             await interaction.response.send_message("🔌 Disconnected from voice channel!")
-            
+
         except Exception as e:
             logger.error(f"Error in disconnect command: {e}")
             await interaction.response.send_message("❌ An error occurred while disconnecting.", ephemeral=True)
@@ -388,34 +706,72 @@ class MusicCommands(commands.Cog):
         try:
             queue = self.get_queue(interaction.guild_id)
             voice_client = self.voice_clients.get(interaction.guild_id)
-            
+
             if not queue.current_song or not voice_client or not voice_client.is_playing():
                 await interaction.response.send_message("❌ No music is currently playing!", ephemeral=True)
                 return
-            
+
+            radio_indicator = " 📻" if queue.radio_mode else ""
+            cache_indicator = " 💾" if queue.current_song.is_cached else " 🌐"
             embed = discord.Embed(
-                title="🎵 Now Playing",
+                title=f"🎵 Now Playing{radio_indicator}{cache_indicator}",
                 description=f"**{queue.current_song.title}**\n👤 **Uploader:** {queue.current_song.uploader}\n⏱️ **Duration:** {queue.current_song.duration}",
                 color=0x00ff00
             )
             if queue.current_song.thumbnail:
                 embed.set_thumbnail(url=queue.current_song.thumbnail)
+
+            footer_text = ""
+            if queue.radio_mode:
+                footer_text += "Radio mode is active - related songs will play automatically"
+            if queue.current_song.is_cached:
+                if footer_text:
+                    footer_text += " | "
+                footer_text += "Using cached audio"
             
+            if footer_text:
+                embed.set_footer(text=footer_text)
+
             await interaction.response.send_message(embed=embed)
-            
+
         except Exception as e:
             logger.error(f"Error in nowplaying command: {e}")
             await interaction.response.send_message("❌ An error occurred while getting current song.", ephemeral=True)
+
+    @app_commands.command(name='clearcache', description='Clear all cached music files')
+    async def slash_clearcache(self, interaction: discord.Interaction):
+        """Clear music cache"""
+        try:
+            await interaction.response.defer()
+            
+            deleted_count = 0
+            for file_path in glob.glob(os.path.join(CACHE_DIR, "*")):
+                if os.path.isfile(file_path):
+                    try:
+                        os.remove(file_path)
+                        deleted_count += 1
+                    except Exception as e:
+                        logger.error(f"Error deleting cache file {file_path}: {e}")
+
+            embed = discord.Embed(
+                title="🗑️ Cache Cleared",
+                description=f"Successfully cleared {deleted_count} cached music files.",
+                color=0x00ff00
+            )
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Error in clearcache command: {e}")
+            await interaction.followup.send("❌ An error occurred while clearing cache.")
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
         """Auto-disconnect if bot is alone in voice channel"""
         if member.bot:
             return
-        
+
         voice_client = self.voice_clients.get(member.guild.id)
         if voice_client and voice_client.channel:
-            # Check if bot is alone in the channel
             if len(voice_client.channel.members) == 1 and voice_client.channel.members[0] == self.bot.user:
                 queue = self.get_queue(member.guild.id)
                 voice_client.stop()
@@ -423,8 +779,7 @@ class MusicCommands(commands.Cog):
                 queue.clear()
                 if member.guild.id in self.voice_clients:
                     del self.voice_clients[member.guild.id]
-                
-                # Find a text channel to send message
+
                 for channel in member.guild.text_channels:
                     if channel.permissions_for(member.guild.me).send_messages:
                         await channel.send("🔌 Disconnected from voice channel due to inactivity.")

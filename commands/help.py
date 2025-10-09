@@ -47,7 +47,7 @@ class HelpCommands(commands.Cog):
             embed.add_field(
                 name="Music Commands",
                 value=
-                "`/play` <song> - Play music from YouTube\n`/skip` - Skip current song\n`/stop` - Stop music and clear queue\n`/pause` - Pause music\n`/resume` - Resume music\n`/queue` - Show current queue\n`/volume` <1-100> - Adjust volume\n`/nowplaying` - Show current song\n`/disconnect` - Disconnect bot from voice",
+                "`/play` <song> - Play music from YouTube\n`/radio` - Toggle radio mode (automatic related songs)\n`/skip` - Skip current song\n`/stop` - Stop music and clear queue\n`/pause` - Pause music\n`/resume` - Resume music\n`/queue` - Show current queue\n`/volume` <1-100> - Adjust volume\n`/nowplaying` - Show current song\n`/disconnect` - Disconnect bot from voice",
                 inline=False)
             embed.add_field(
                 name="General Commands",
