@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 # Bot configuration
 intents = discord.Intents.default()
-intents.message_content = False
+intents.message_content = True
 intents.voice_states = True  # Required for music functionality
 bot = commands.Bot(command_prefix='!', intents=intents)
 
