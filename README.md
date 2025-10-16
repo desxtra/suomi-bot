@@ -1,14 +1,13 @@
 # Character.AI Suomi KP-31 Discord Bot
 
-A Discord bot that brings Suomi Kp-31 to your Discord server and provides tools for managing the Gunsmoke Frontline event, plus a full-featured music player.
+A Discord bot that brings Suomi Kp-31 to your Discord server, featuring AI chat capabilities, music playback functionality, and access to community resources.
 
 ## Features
 
-- **🤖 AI Chat**: Chat with Suomi directly in Discord using Character.AI
-- **🎵 Music Player**: High-quality music streaming from YouTube
-- **📅 Gunsmoke Reminder**: Automated event management and notifications
-- **📊 Important Sheets**: Quick access to community resources
-- **💬 Multiple Interaction Methods**: Slash commands, mentions, and DMs
+- **AI Chat System**: Direct interaction with Suomi through Discord using Character.AI
+- **Music Player**: High-quality music streaming from YouTube
+- **Resource Access**: Quick access to community spreadsheets and resources
+- **Interaction Methods**: Supports slash commands, mentions, and direct messages
 
 ## Setup Instructions
 
@@ -64,19 +63,17 @@ brew install ffmpeg
 npm install @ffmpeg/ffmpeg @ffmpeg/core
 ```
 
-## Basic Usage
+## Available Commands
 
-Once the bot is running and invited to your server:
+### AI Chat Interaction
 
-### Chatting with Suomi
-
-- **Send a DM**: Just message the bot directly
-- **Mention the bot**: @Suomi KP-31 followed by your message
-- **Use commands**:
+- **Direct Messages**: Send messages directly to the bot
+- **Mention**: Use @Suomi KP-31 followed by your message
+- **Commands**:
   - `/chat <message>` - Chat with Suomi
   - `/reset` - Reset your conversation history
 
-### Music Player
+### Music Commands
 
 - `/play <song/url>` - Play music from YouTube
 - `/skip` - Skip the current song
@@ -84,33 +81,15 @@ Once the bot is running and invited to your server:
 - `/pause` - Pause playback
 - `/resume` - Resume playback
 - `/queue` - Show current music queue
-- `/volume <1-100>` - Adjust volume (1-100)
-- `/nowplaying` - Show currently playing song
-- `/disconnect` - Disconnect bot from voice channel
-
-### Gunsmoke Frontline Management
-
-The bot provides tools to help manage the Gunsmoke Frontline event:
-
-- **Automatic reminders**: Get notified about event start, end, and reset times
-- **Event status**: Check the current status of the event
-- **Channel management**: Set up channels for event notifications
-
-#### Commands
-
-- `/gunsmoke status` - Check the current Gunsmoke status
-- `/gunsmoke enable` - Enable the reminder system
-- `/gunsmoke disable` - Disable the reminder system
-- `/gunsmoke set_start <date>` - Set the start date (YYYY-MM-DD format)
-- `/gunsmoke add_channel <channel>` - Add a channel for notifications
-- `/gunsmoke remove_channel <channel>` - Remove a channel from notifications
-- `/gunsmoke list_channels` - List all notification channels
+- `/volume <1-100>` - Adjust volume level
+- `/nowplaying` - Display current song information
+- `/disconnect` - Disconnect from voice channel
 
 ### Utility Commands
 
-- `/help` - Show all available commands
-- `/sheets` - Get direct links to important Google Sheets
-- `/reset` - Reset your AI conversation history
+- `/help` - Display all available commands
+- `/sheets` - Access important community spreadsheets
+- `/reset` - Reset AI conversation history
 
 ## File Structure
 
@@ -123,25 +102,23 @@ commands/
 └── help.py            # Help and utility commands
 ```
 
-## How it Works
+## Technical Overview
 
 ### AI Chat System
-- Maintains separate conversation contexts for each user
-- Uses Character.AI API for realistic responses
-- Supports both text commands and slash commands
+- Individual conversation contexts per user
+- Integration with Character.AI API
+- Support for direct messages, mentions, and commands
 
 ### Music Player
-- Streams high-quality audio from YouTube
-- Supports playlists and search queries
-- Automatic queue management
-- Volume control and playback controls
-- Auto-disconnects when alone in voice channel
+- YouTube audio streaming integration
+- Queue management system
+- Playback controls and volume adjustment
+- Auto-disconnect functionality
 
-### Gunsmoke Management
-- Tracks event dates and schedules
-- Sends automated reminders
-- Configurable notification channels
-- Automatic scheduling of recurring events
+### Resource Management
+- Quick access to community spreadsheets
+- Integration with Discord's slash command system
+- Efficient command handling and response system
 
 ## Troubleshooting
 
