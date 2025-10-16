@@ -23,10 +23,10 @@ os.makedirs(CACHE_DIR, exist_ok=True)
 CACHE_MAX_AGE = 3600  # 1 hour in seconds
 CACHE_MAX_SIZE = 500 * 1024 * 1024  # 500 MB
 
-# YouTube DL options for audio only with better YouTube Music support
+# YouTube DL options for audio only with better caching
 ytdl_format_options = {
     'format': 'bestaudio/best',
-    'outtmpl': os.path.join(CACHE_DIR, '%(extractor)s-%(id)s-%(title)s.%(ext)s'),
+    'outtmpl': os.path.join(CACHE_DIR, '%(id)s.%(ext)s'),  # Simplified filename
     'restrictfilenames': True,
     'noplaylist': False,
     'nocheckcertificate': True,
@@ -45,6 +45,8 @@ ytdl_format_options = {
     'fragment_retries': 10,
     'skip_unavailable_fragments': True,
     'continue_dl': True,
+    # Force download for caching
+    'cachedir': os.path.join(CACHE_DIR, 'yt_dlp_cache'),
 }
 
 ffmpeg_options = {
@@ -92,13 +94,29 @@ class YTDLSource(discord.PCMVolumeTransformer):
             url = f"ytsearch:{url}"
 
         try:
-            # Try streaming first if requested
+            # First, check if we already have this file cached
+            data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))
+            if 'entries' in data:
+                data = data['entries'][0]
+            
+            video_id = data.get('id')
+            if video_id:
+                # Look for cached file
+                cached_files = glob.glob(os.path.join(CACHE_DIR, f"{video_id}.*"))
+                # Filter out non-audio files and yt-dlp cache directories
+                cached_files = [f for f in cached_files if not f.endswith(('.json', '.part')) and 'yt_dlp_cache' not in f]
+                
+                if cached_files:
+                    # Use cached file
+                    cached_file = cached_files[0]
+                    source = cls(discord.FFmpegPCMAudio(cached_file, **ffmpeg_local_options), data=data, is_cached=True)
+                    source.filename = cached_file
+                    logger.info(f"Using cached audio: {source.title} from {cached_file}")
+                    return source
+
+            # If no cache found or streaming requested, try streaming first
             if stream:
                 try:
-                    data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))
-                    if 'entries' in data:
-                        data = data['entries'][0]
-                    
                     filename = data['url']
                     source = cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data, is_cached=False)
                     logger.info(f"Streaming audio: {source.title}")
@@ -109,15 +127,27 @@ class YTDLSource(discord.PCMVolumeTransformer):
                         raise stream_error
                     # Fall through to download
 
-            # Download the audio
-            data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=True))
-            if 'entries' in data:
-                data = data['entries'][0]
+            # Download the audio (this will use cache if available via yt-dlp)
+            downloaded_data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=True))
+            if 'entries' in downloaded_data:
+                downloaded_data = downloaded_data['entries'][0]
 
-            filename = ytdl.prepare_filename(data)
-            source = cls(discord.FFmpegPCMAudio(filename, **ffmpeg_local_options), data=data, is_cached=True)
+            # Find the downloaded file
+            downloaded_video_id = downloaded_data.get('id')
+            if downloaded_video_id:
+                downloaded_files = glob.glob(os.path.join(CACHE_DIR, f"{downloaded_video_id}.*"))
+                downloaded_files = [f for f in downloaded_files if not f.endswith(('.json', '.part')) and 'yt_dlp_cache' not in f]
+                
+                if downloaded_files:
+                    filename = downloaded_files[0]
+                else:
+                    filename = ytdl.prepare_filename(downloaded_data)
+            else:
+                filename = ytdl.prepare_filename(downloaded_data)
+
+            source = cls(discord.FFmpegPCMAudio(filename, **ffmpeg_local_options), data=downloaded_data, is_cached=True)
             source.filename = filename
-            logger.info(f"Using cached/downloaded audio: {source.title}")
+            logger.info(f"Downloaded and cached audio: {source.title} to {filename}")
             return source
 
         except Exception as e:
@@ -144,13 +174,10 @@ class YTDLSource(discord.PCMVolumeTransformer):
             return f"{minutes:02d}:{seconds:02d}"
 
     def cleanup(self):
-        """Remove cached file if it exists"""
-        if self.is_cached and self.filename and os.path.exists(self.filename):
-            try:
-                os.remove(self.filename)
-                logger.info(f"Cleaned up cached file: {self.filename}")
-            except Exception as e:
-                logger.error(f"Error cleaning up file {self.filename}: {e}")
+        """Remove cached file if it exists - but we'll keep files for caching"""
+        # Don't cleanup immediately - keep files cached for future use
+        # We'll rely on the periodic cleanup task instead
+        pass
 
 class MusicQueue:
     def __init__(self):
@@ -168,9 +195,10 @@ class MusicQueue:
         if self.loop and self.current_song:
             return self.current_song
 
-        # Clean up previous song
+        # Clean up previous song (but keep the file for caching)
         if self.current_song:
-            self.current_song.cleanup()
+            # We don't cleanup immediately to allow caching
+            pass
 
         if self._queue:
             self.current_song = self._queue.pop(0)
@@ -178,23 +206,17 @@ class MusicQueue:
         return None
 
     def clear(self):
-        # Clean up all songs in queue
-        for song in self._queue:
-            if hasattr(song, 'cleanup'):
-                song.cleanup()
-        if self.current_song:
-            self.current_song.cleanup()
-            
+        # Don't cleanup files - keep them cached
         self._queue.clear()
         self.current_song = None
         self.radio_mode = False
         self.radio_seed = None
 
     def remove(self, index):
+        """Remove a specific song from queue by index (1-based)"""
         if 0 <= index < len(self._queue):
             song = self._queue.pop(index)
-            if hasattr(song, 'cleanup'):
-                song.cleanup()
+            # Don't cleanup the file - keep it cached
             return song
         return None
 
@@ -244,23 +266,44 @@ class MusicCommands(commands.Cog):
             deleted_count = 0
             total_size = 0
 
+            # Calculate total cache size first
+            cache_files = []
             for file_path in glob.glob(os.path.join(CACHE_DIR, "*")):
-                if os.path.isfile(file_path):
-                    file_age = current_time - os.path.getmtime(file_path)
-                    file_size = os.path.getsize(file_path)
-                    total_size += file_size
+                if os.path.isfile(file_path) and not file_path.endswith(('.part', '.json')) and 'yt_dlp_cache' not in file_path:
+                    try:
+                        file_stats = os.stat(file_path)
+                        cache_files.append((file_path, file_stats.st_mtime, file_stats.st_size))
+                        total_size += file_stats.st_size
+                    except OSError:
+                        continue
 
-                    # Delete if too old or if cache is too large
-                    if file_age > CACHE_MAX_AGE or total_size > CACHE_MAX_SIZE:
-                        try:
-                            os.remove(file_path)
-                            deleted_count += 1
-                            logger.info(f"Cleaned up old cache file: {file_path}")
-                        except Exception as e:
-                            logger.error(f"Error deleting cache file {file_path}: {e}")
+            # Sort by modification time (oldest first)
+            cache_files.sort(key=lambda x: x[1])
+
+            # Delete files if cache is too large or files are too old
+            for file_path, mtime, file_size in cache_files:
+                file_age = current_time - mtime
+
+                should_delete = False
+                reason = ""
+                if file_age > CACHE_MAX_AGE:
+                    should_delete = True
+                    reason = "age"
+                elif total_size > CACHE_MAX_SIZE:
+                    should_delete = True
+                    reason = "size"
+                    total_size -= file_size  # Reduce total size
+
+                if should_delete:
+                    try:
+                        os.remove(file_path)
+                        deleted_count += 1
+                        logger.info(f"Cleaned up cache file ({reason}): {os.path.basename(file_path)}")
+                    except Exception as e:
+                        logger.error(f"Error deleting cache file {file_path}: {e}")
 
             if deleted_count > 0:
-                logger.info(f"Cleaned up {deleted_count} old cache files")
+                logger.info(f"Cleaned up {deleted_count} cache files. Current cache size: {total_size / (1024*1024):.2f} MB")
 
         except Exception as e:
             logger.error(f"Error in cleanup_old_cache: {e}")
@@ -325,7 +368,7 @@ class MusicCommands(commands.Cog):
                     player = await YTDLSource.from_video_id(
                         video_id, 
                         loop=self.bot.loop, 
-                        stream=True,  # Try streaming first for radio
+                        stream=False,  # Force download for radio mode to build cache
                         fallback_to_download=True
                     )
                     queue.add(player)
@@ -343,7 +386,7 @@ class MusicCommands(commands.Cog):
                         player = await YTDLSource.from_video_id(
                             video_id, 
                             loop=self.bot.loop, 
-                            stream=True,
+                            stream=False,  # Force download
                             fallback_to_download=True
                         )
                         queue.add(player)
@@ -466,13 +509,13 @@ class MusicCommands(commands.Cog):
                     await interaction.followup.send("❌ Could not connect to the voice channel!")
                     return
 
-            # Search and play with streaming first, fallback to download
+            # Try to use cached version first, fallback to streaming
             try:
                 player = await YTDLSource.from_url(
                     query, 
                     loop=self.bot.loop, 
-                    stream=True,  # Try streaming first
-                    fallback_to_download=True  # Fallback to download if streaming fails
+                    stream=False,  # Try cached/download first
+                    fallback_to_download=True
                 )
                 
                 queue = self.get_queue(interaction.guild_id)
@@ -623,6 +666,41 @@ class MusicCommands(commands.Cog):
             logger.error(f"Error in queue command: {e}")
             await interaction.response.send_message("❌ An error occurred while showing the queue.", ephemeral=True)
 
+    @app_commands.command(name='remove', description='Remove a specific song from the queue')
+    @app_commands.describe(position='Position of the song in the queue (use /queue to see positions)')
+    async def slash_remove(self, interaction: discord.Interaction, position: int):
+        """Remove a specific song from the queue"""
+        try:
+            queue = self.get_queue(interaction.guild_id)
+            
+            if len(queue) == 0:
+                await interaction.response.send_message("❌ The queue is empty!", ephemeral=True)
+                return
+                
+            if position < 1 or position > len(queue):
+                await interaction.response.send_message(
+                    f"❌ Invalid position! Please use a number between 1 and {len(queue)}.", 
+                    ephemeral=True
+                )
+                return
+
+            # Remove the song (position is 1-based, list is 0-based)
+            removed_song = queue.remove(position - 1)
+            
+            if removed_song:
+                embed = discord.Embed(
+                    title="🗑️ Removed from Queue",
+                    description=f"Removed **{removed_song.title}** from position {position}",
+                    color=0x00ff00
+                )
+                await interaction.response.send_message(embed=embed)
+            else:
+                await interaction.response.send_message("❌ Failed to remove the song.", ephemeral=True)
+
+        except Exception as e:
+            logger.error(f"Error in remove command: {e}")
+            await interaction.response.send_message("❌ An error occurred while removing the song.", ephemeral=True)
+
     @app_commands.command(name='pause', description='Pause the current song')
     async def slash_pause(self, interaction: discord.Interaction):
         """Pause the current song"""
@@ -746,7 +824,7 @@ class MusicCommands(commands.Cog):
             
             deleted_count = 0
             for file_path in glob.glob(os.path.join(CACHE_DIR, "*")):
-                if os.path.isfile(file_path):
+                if os.path.isfile(file_path) and not file_path.endswith(('.part', '.json')) and 'yt_dlp_cache' not in file_path:
                     try:
                         os.remove(file_path)
                         deleted_count += 1

@@ -34,7 +34,7 @@ class HelpCommands(commands.Cog):
         """Slash command for help"""
         try:
             embed = discord.Embed(title="Suomi KP-31",
-                                description="I love rock music!",
+                                description="I love rock music!\nMade with <3 by destraxion",
                                 color=0x00ff00)
             embed.add_field(name="Usage",
                             value="Use `/chat <message>` to chat with me!.\n`/reset` - Reset your conversation history",
