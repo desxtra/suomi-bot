@@ -81,6 +81,7 @@ npm install @ffmpeg/ffmpeg @ffmpeg/core
 - `/pause` - Pause playback
 - `/resume` - Resume playback
 - `/queue` - Show current music queue
+- `/remove` - Remove spesific music from queue
 - `/volume <1-100>` - Adjust volume level
 - `/nowplaying` - Display current song information
 - `/disconnect` - Disconnect from voice channel
