@@ -8,10 +8,14 @@ wheels/
 
 # Virtual environments
 .venv
+venv/
 
 # Environment variables file
 .env
 
-# dev file
-dev.py
-.aider*
+# backup file
+backup.py
+
+# cache files
+music_cache/
+gunsmoke_config.json
