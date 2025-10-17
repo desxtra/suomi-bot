@@ -19,3 +19,6 @@ backup.py
 # cache files
 music_cache/
 gunsmoke_config.json
+
+# database
+database/
