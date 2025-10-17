@@ -38,14 +38,32 @@ async def on_ready():
     # Load command modules
     await load_commands()
 
-    # Sync slash commands
+    # Clear any existing commands and sync fresh
     try:
+        # First clear any existing commands to ensure clean sync
+        bot.tree.clear_commands(guild=None)
+        
+        # Sync slash commands globally
         synced = await bot.tree.sync()
-        print(f'Synced {len(synced)} slash commands')
+        print(f'✅ Successfully synced {len(synced)} slash commands globally')
+        
+        # List all synced commands for verification
+        command_names = [cmd.name for cmd in synced]
+        print(f'📋 Available commands: {", ".join(command_names)}')
+        
     except Exception as e:
-        print(f'Failed to sync slash commands: {e}')
+        print(f'❌ Failed to sync slash commands: {e}')
 
-    print('Bot is ready!')
+    print('🤖 Bot is ready and commands are synced!')
+
+@bot.event
+async def on_guild_join(guild):
+    """Automatically sync commands when bot joins a new server"""
+    try:
+        await bot.tree.sync(guild=guild)
+        print(f"✅ Synced commands with new guild: {guild.name} (ID: {guild.id})")
+    except Exception as e:
+        print(f"❌ Failed to sync with new guild {guild.name}: {e}")
 
 @bot.event
 async def on_error(event, *args, **kwargs):
@@ -82,12 +100,13 @@ async def on_message(message):
 if __name__ == '__main__':
     discord_token = os.getenv('DISCORD_TOKEN')
     if not discord_token:
-        print("Error: DISCORD_TOKEN not found in environment variables.")
+        print("❌ Error: DISCORD_TOKEN not found in environment variables.")
         exit(1)
 
     try:
+        print("🚀 Starting bot...")
         bot.run(discord_token)
     except discord.LoginFailure:
-        print("Error: Invalid Discord token. Please check your DISCORD_TOKEN.")
+        print("❌ Error: Invalid Discord token. Please check your DISCORD_TOKEN.")
     except Exception as e:
-        print(f"Error running bot: {e}")
+        print(f"❌ Error running bot: {e}")
