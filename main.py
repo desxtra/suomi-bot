@@ -35,26 +35,29 @@ async def load_commands():
 async def on_ready():
     print(f'{bot.user} has landed!')
 
-    # Load command modules
+    # Load command modules first
     await load_commands()
 
-    # Clear any existing commands and sync fresh
+    # Sync slash commands globally
     try:
-        # First clear any existing commands to ensure clean sync
-        bot.tree.clear_commands(guild=None)
-        
-        # Sync slash commands globally
+        print("🔄 Syncing slash commands...")
         synced = await bot.tree.sync()
         print(f'✅ Successfully synced {len(synced)} slash commands globally')
         
         # List all synced commands for verification
-        command_names = [cmd.name for cmd in synced]
-        print(f'📋 Available commands: {", ".join(command_names)}')
+        if synced:
+            command_names = [cmd.name for cmd in synced]
+            print(f'📋 Available commands: {", ".join(sorted(command_names))}')
+        else:
+            print('⚠️  No commands were synced. Check if your cogs are loading properly.')
         
     except Exception as e:
         print(f'❌ Failed to sync slash commands: {e}')
+        # Try to get more detailed error information
+        import traceback
+        traceback.print_exc()
 
-    print('🤖 Bot is ready and commands are synced!')
+    print('🤖 Bot is ready!')
 
 @bot.event
 async def on_guild_join(guild):
