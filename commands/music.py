@@ -54,20 +54,20 @@ ffmpeg_options = {
         '-reconnect 1 '
         '-reconnect_streamed 1 '
         '-reconnect_delay_max 30 '
-        '-timeout 30000000 '
+        '-timeout 15000000  '
         '-protocol_whitelist "file,http,https,tcp,tls" '
-        '-probesize 32M '
+        '-probesize 16M '
         '-analyzeduration 0 '
         '-nostdin '
         '-multiple_requests 1 '
         '-user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"'
     ),
-    'options': '-vn -bufsize 1024k -af "volume=0.5"'
+    'options': '-vn -bufsize 512k -af volume=0.5'
 }
 
 ffmpeg_local_options = {
     'before_options': '-nostdin',
-    'options': '-vn -bufsize 512k'
+    'options': '-vn -bufsize 256k'
 }
 
 ytdl = yt_dlp.YoutubeDL(ytdl_format_options)
