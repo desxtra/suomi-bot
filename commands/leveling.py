@@ -13,6 +13,9 @@ DB_PATH = "database/leveling.db"
 
 def init_db():
     """Initialize the database"""
+    # Create database directory if it doesn't exist
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
@@ -44,11 +47,13 @@ class LevelingCommands(commands.Cog):
 
     def calculate_level(self, xp):
         """Calculate level based on XP using a progressive formula"""
-        return max(1, int((xp / 100) ** 0.5))
+        # Fixed formula: level = sqrt(xp/100) + 1
+        return max(1, int(((xp / 100) ** 0.5) + 1))
 
     def calculate_xp_for_level(self, level):
         """Calculate XP required for a specific level"""
-        return (level ** 2) * 100
+        # Fixed formula: XP = (level - 1)^2 * 100
+        return ((level - 1) ** 2) * 100
 
     @commands.Cog.listener()
     async def on_message(self, message):
@@ -144,30 +149,37 @@ class LevelingCommands(commands.Cog):
 
             if result:
                 xp, level, messages = result
+                # Fixed XP calculations
+                current_level_xp = self.calculate_xp_for_level(level)
                 next_level_xp = self.calculate_xp_for_level(level + 1)
-                xp_progress = xp - self.calculate_xp_for_level(level)
-                xp_needed = next_level_xp - self.calculate_xp_for_level(level)
-                progress_percentage = (xp_progress / xp_needed) * 100
+                xp_progress = xp - current_level_xp
+                xp_needed = next_level_xp - current_level_xp
+                
+                # Ensure progress is never negative
+                if xp_progress < 0:
+                    xp_progress = 0
+                
+                progress_percentage = (xp_progress / xp_needed) * 100 if xp_needed > 0 else 100
 
                 # Create progress bar
                 progress_bar_length = 10
-                filled_blocks = int(progress_percentage / 100 * progress_bar_length)
+                filled_blocks = min(progress_bar_length, int(progress_percentage / 100 * progress_bar_length))
                 progress_bar = "█" * filled_blocks + "░" * (progress_bar_length - filled_blocks)
 
                 embed = discord.Embed(
-                    title=f"📊 {target_user.display_name}'s Level",
+                    title=f"📊 {target_user.display_name}'s Level Stats",
                     color=0x00ff00
                 )
                 embed.add_field(name="Level", value=f"**{level}**", inline=True)
-                embed.add_field(name="XP", value=f"**{xp}**", inline=True)
+                embed.add_field(name="Total XP", value=f"**{xp}**", inline=True)
                 embed.add_field(name="Messages", value=f"**{messages}**", inline=True)
                 embed.add_field(
-                    name="Progress to Next Level", 
+                    name="Progress to Level {0}".format(level + 1), 
                     value=f"`{progress_bar}` {progress_percentage:.1f}%", 
                     inline=False
                 )
                 embed.add_field(
-                    name="XP Needed", 
+                    name="XP Progress", 
                     value=f"**{xp_progress}** / **{xp_needed}** XP", 
                     inline=False
                 )
@@ -213,8 +225,20 @@ class LevelingCommands(commands.Cog):
             if results:
                 leaderboard_text = ""
                 for i, (user_id, level, xp, messages) in enumerate(results, 1):
-                    user = interaction.guild.get_member(user_id)
-                    username = user.display_name if user else f"Unknown User ({user_id})"
+                    # Try to get the member from the guild
+                    member = interaction.guild.get_member(user_id)
+                    if member:
+                        # Use global name (unique) instead of display name
+                        username = member.global_name or member.name
+                        display_text = f"**{username}**"
+                    else:
+                        # If member not found, try to fetch user info
+                        try:
+                            user = await self.bot.fetch_user(user_id)
+                            username = user.global_name or user.name
+                            display_text = f"**{username}** (Left Server)"
+                        except:
+                            display_text = f"Unknown User ({user_id})"
                     
                     medal = ""
                     if i == 1:
@@ -226,7 +250,7 @@ class LevelingCommands(commands.Cog):
                     else:
                         medal = f"`{i}.`"
 
-                    leaderboard_text += f"{medal} **{username}** - Level {level} | {xp} XP\n"
+                    leaderboard_text += f"{medal} {display_text} - Level {level} | {xp} XP\n"
 
                 embed.description = leaderboard_text
             else:
@@ -238,6 +262,33 @@ class LevelingCommands(commands.Cog):
         except Exception as e:
             await interaction.response.send_message("❌ An error occurred while fetching the leaderboard.", ephemeral=True)
             print(f"Error in leaderboard command: {e}")
+
+    @app_commands.command(name='reset_levels', description='Reset leveling data for this server (Admin only)')
+    @app_commands.default_permissions(administrator=True)
+    async def slash_reset_levels(self, interaction: discord.Interaction):
+        """Reset all leveling data for the server"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute(
+                'DELETE FROM user_levels WHERE guild_id = ?',
+                (interaction.guild.id,)
+            )
+            
+            conn.commit()
+            conn.close()
+            
+            embed = discord.Embed(
+                title="🔄 Level Data Reset",
+                description="All leveling data for this server has been reset.",
+                color=0x00ff00
+            )
+            await interaction.response.send_message(embed=embed)
+            
+        except Exception as e:
+            await interaction.response.send_message("❌ An error occurred while resetting level data.", ephemeral=True)
+            print(f"Error in reset_levels command: {e}")
 
 async def setup(bot):
     await bot.add_cog(LevelingCommands(bot))
