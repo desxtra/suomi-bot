@@ -3,4 +3,5 @@ discord.py==2.6.4
 PyCharacterAI==2.2.50
 python-dotenv==1.1.1
 pytz==2025.2
-yt_dlp==2025.9.26
+yt_dlp
+pynacl

@@ -1,0 +1,7 @@
+services:
+  suomi-bot:
+    image: suomi-bot:latest
+    container_name: suomi-bot
+    env_file:
+      - .env
+    restart: unless-stopped
